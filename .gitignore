@@ -3,6 +3,7 @@ logs/*
 temp/*
 *.log
 
+
 # == 모듈 및 빌드 파일 ==
 src/modules/*
 src/configs/*.lua
@@ -34,7 +35,7 @@ Thumbs.db
 # --- 중요 문서 및 메모 ---
 # 만약 Important.txt에 비번 등이 적혀 있다면 제외하세요.
 # Important.txt
-
 Dockerfile
-
 .env
+*.crt
+

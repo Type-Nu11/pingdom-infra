@@ -1,0 +1,21 @@
+worker_processes 1;
+daemon off;
+error_log logs/error.log info;
+pid logs/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+
+    server {
+        resolver 8.8.8.8 ipv6=off valid=300;
+
+        lua_package_path "/usr/local/openresty/nginx/src/?.lua;/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/lualib/?.lua;;";
+
+        lua_shared_dict limit_req_store 10m;
+        lua_shared_dict limit_conn_store 10m;
+
+    }
+}
