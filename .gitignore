@@ -1,0 +1,35 @@
+logs/*
+!logs/.gitkeep
+temp/*
+*.log
+
+
+# --- 임시 및 실행 파일 ---
+logs/*.log
+*_temp/
+client_body_temp/
+proxy_temp/
+fastcgi_temp/
+uwsgi_temp/
+scgi_temp/
+
+# --- 보안 및 민감 정보 (매우 중요) ---
+# SSL 인증서와 키는 절대로 깃허브에 올리면 안 됩니다.
+ssl/*
+!ssl/.gitkeep
+
+# DB 정보나 API 키가 담긴 파일이 있다면 제외
+database/*.db
+database/*.sqlite
+
+# --- 운영체제 및 에디터 ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# --- 중요 문서 및 메모 ---
+# 만약 Important.txt에 비번 등이 적혀 있다면 제외하세요.
+# Important.txt
+.env
+*.crt
