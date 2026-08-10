@@ -122,28 +122,28 @@ Docker 실행	OpenResty 실행 환경 검증
 HTTP 요청 테스트	Proxy Routing 및 요청 처리 검증
 Repository Structure
 .
-├── Dockerfile                    # Gateway Docker 이미지 구성
+├── Dockerfile
 ├── README.md
 ├── configs
 │   ├── conf.d
-│   │   ├── locations             # Nginx Location 라우팅 설정
-│   │   ├── log.conf              # 로그 설정
-│   │   └── proxy.conf            # Proxy 동작 설정
-│   └── nginx.conf.template       # Nginx 설정 템플릿
+│   │   ├── locations
+│   │   ├── log.conf
+│   │   └── proxy.conf
+│   └── nginx.conf.template
 ├── database
-│   ├── GeoLite2-ASN.mmdb         # ASN 기반 네트워크 정보 데이터
-│   └── GeoLite2-Country.mmdb     # 국가 기반 GeoIP 데이터
+│   ├── GeoLite2-ASN.mmdb
+│   └── GeoLite2-Country.mmdb
 └── src
-    ├── acme_file.lua             # ACME 인증서 처리
+    ├── acme_file.lua
     ├── contents
-    │   └── auth.lua              # 인증 관련 요청 처리
-    ├── init.lua                  # OpenResty 초기화 설정
-    ├── init_worker.lua           # Worker 초기화 및 주기 작업 처리
+    │   └── auth.lua
+    ├── init.lua
+    ├── init_worker.lua
     ├── modules
-    │   ├── crawling.lua          # 크롤링 관련 모듈
-    │   └── ratelimit.lua         # Rate Limit 처리 모듈
+    │   ├── crawling.lua
+    │   └── ratelimit.lua
     └── utils
-        └── exceptions.lua        # 공통 예외 처리
+        └── exceptions.lua
 
 실제 구조를 기준으로 주요 디렉터리와 파일만 설명합니다.
 
