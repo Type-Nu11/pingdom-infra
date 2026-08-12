@@ -2,20 +2,26 @@ worker_processes 1;
 daemon off;
 error_log logs/error.log info;
 pid logs/nginx.pid;
+env HMAC_SECRET_KEY;
+env SECRET_KEY;
 
 events {
     worker_connections 1024;
 }
 
 http {
+        lua_package_path "/src/domain/auth/module/?.lua;/src/domain/auth/?.lua;/usr/local/openresty/nginx/src/?.lua;/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/lualib/?.lua;;";
+
+        lua_shared_dict limit_req_store 10m;
+        lua_shared_dict limit_conn_store 10m;
+
+        include conf.d/log.conf;
 
     server {
         resolver 8.8.8.8 ipv6=off valid=300;
 
-        lua_package_path "/usr/local/openresty/nginx/src/?.lua;/usr/local/openresty/site/lualib/?.lua;/usr/local/openresty/lualib/?.lua;;";
-
-        lua_shared_dict limit_req_store 10m;
-        lua_shared_dict limit_conn_store 10m;
+        include conf.d/proxy.conf;
+        include conf.d/locations/*.conf;
 
     }
 }
