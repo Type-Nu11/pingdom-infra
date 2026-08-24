@@ -121,6 +121,7 @@ docker build	Gateway 이미지 생성 검증
 Docker 실행	OpenResty 실행 환경 검증
 HTTP 요청 테스트	Proxy Routing 및 요청 처리 검증
 Repository Structure
+```
 .
 ├── Dockerfile
 ├── README.md
@@ -144,6 +145,7 @@ Repository Structure
     │   └── ratelimit.lua
     └── utils
         └── exceptions.lua
+```
 
 실제 구조를 기준으로 주요 디렉터리와 파일만 설명합니다.
 
