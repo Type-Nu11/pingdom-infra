@@ -38,4 +38,5 @@ Thumbs.db
 Dockerfile
 .env
 *.crt
+temp/*
 
