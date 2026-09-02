@@ -73,3 +73,14 @@ pub unsafe extern "C" fn validate_app_request(
     }
 }
 
+unsafe fn read_bytes<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], i32> {
+    if len == 0 {
+        return Ok(&[]);
+    }
+
+    if ptr.is_null() {
+        return Err(INVALID_INPUT);
+    }
+
+    Ok(slice::from_raw_parts(ptr, len))
+}
