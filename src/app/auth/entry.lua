@@ -18,7 +18,7 @@ if not req then
     return reject(ngx.HTTP_BAD_REQUEST, err)
 end
 
-local ok, err = validator.validate(req)
+local ok, validation_error = validator.validate(req)
 
 if not ok then
     return reject(
