@@ -39,4 +39,4 @@ Dockerfile
 .env
 *.crt
 temp/*
-
+!temp/.gitkeep
