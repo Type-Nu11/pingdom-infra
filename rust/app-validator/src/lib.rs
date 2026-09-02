@@ -169,3 +169,11 @@ fn validate(
     VALID
 }
 
+fn is_semver(value: &str) -> bool {
+    let parts: Vec<&str> = value.split('.').collect();
+
+    parts.len() == 3
+        && parts
+            .iter()
+            .all(|part| !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()))
+}
