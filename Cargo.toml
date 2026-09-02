@@ -1,0 +1,13 @@
+[package]
+name = "app-validator"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+base64 = "0.22"
+hmac = "0.12"
+sha2 = "0.10"
+uuid = "1"
