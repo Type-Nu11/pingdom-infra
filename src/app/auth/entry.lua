@@ -1,5 +1,6 @@
 local cjson = require "cjson"
-local http = require "resty.http"
+local request = require "app.auth.request"
+local validator = require "app.rust.validator"
 
 -- private reject function (closes conn)
 local function reject(status, message)
@@ -11,27 +12,17 @@ local function reject(status, message)
     return ngx.exit(status)
 end
 
-local function read_body()
-    ngx.req.read_body()
+local req, err = request.build()
 
-    local body = ngx.req.get_body_data()
-    if body then
-        return body
-    end
-
-    local body_file = ngx.req.get_body_file()
-    if not body_file then
-        return "" -- no body because service domain doesnt close conn by itself in a domain
-    end
-
-    local file = io.open(body_file, "rb")
-    if not file then
-        return ""
-    end
-
-    body = file:read("*a") or ""
-    file:close()
-    
-    return body
+if not req then
+    return reject(ngx.HTTP_BAD_REQUEST, err)
 end
 
+local ok, err = validator.validate(req)
+
+if not ok then
+    return reject(
+        validation_error.status or ngx.HTTP_UNAUTHORIZED,
+        validation_error.message or "request rejected"
+    )
+end
