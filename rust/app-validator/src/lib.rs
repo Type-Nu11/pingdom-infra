@@ -84,3 +84,88 @@ unsafe fn read_bytes<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], i32> {
 
     Ok(slice::from_raw_parts(ptr, len))
 }
+
+// validate headers
+fn validate(
+    method: &[u8],
+    uri: &[u8],
+    timestamp: &[u8],
+    signature: &[u8],
+    app_version: &[u8],
+    device_id: &[u8],
+    body: &[u8],
+    secret: &[u8],
+) -> i32 {
+    if secret.is_empty() {
+        return INVALID_INPUT;
+    }
+
+    let timestamp = match std::str::from_utf8(timestamp) 
+        .ok()
+        .and_then(|val| val.trim().parse::<i64>().ok())
+    {
+        Some(val) => val,
+        None => return INVALID_TIMESTAMP,
+    };
+
+    let now = match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(value) => value.as_secs() as i64,
+        Err(_) => return CLOCK_ERROR,
+    };
+
+    if (now - timestamp).abs() > TIMESTAMP_TTL {
+        return INVALID_TIMESTAMP;
+    }
+
+    let app_version = match std::str::from_utf8(app_version) {
+        Ok(value) => value,
+        Err(_) => return INVALID_APP_VERSION,
+    };
+
+    if !is_semver(app_version) {
+        return INVALID_APP_VERSION;
+    }
+
+    let device_id = match std::str::from_utf8(device_id) {
+        Ok(value) => value,
+        Err(_) => return INVALID_DEVICE_ID,
+    };
+
+    if Uuid::parse_str(device_id).is_err() {
+        return INVALID_DEVICE_ID;
+    }
+
+    let signature = match std::str::from_utf8(signature) {
+        Ok(value) => value.trim(),
+        Err(_) => return INVALID_SIGNATURE,
+    };
+
+    let provided_signature = match STANDARD.decode(signature) {
+        Ok(value) => value,
+        Err(_) => return INVALID_SIGNATURE,
+    };
+
+    let mut mac = match HmacSha256::new_from_slice(secret) {
+        Ok(value) => value,
+        Err(_) => return INVALID_INPUT,
+    };
+
+    mac.update(method);
+    mac.update(b"|");
+    mac.update(uri);
+    mac.update(b"|");
+    mac.update(timestamp.to_string().as_bytes());
+    mac.update(b"|");
+    mac.update(app_version.as_bytes());
+    mac.update(b"|");
+    mac.update(device_id.as_bytes());
+    mac.update(b"|");
+    mac.update(body);
+
+    if mac.verify_slice(&provided_signature).is_err() {
+        return INVALID_SIGNATURE;
+    }
+
+    VALID
+}
+
