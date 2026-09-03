@@ -19,6 +19,7 @@ pub const CLOCK_ERROR: i32 = 6;
 
 const TIME_STAMP: i64 = 60;
 
+// C extern function for Lua <-- XD
 #[no_mangle]
 pub unsafe extern "C" fn validate_app_request(
     method: *const u8,
@@ -100,6 +101,7 @@ fn validate(
         return INVALID_INPUT;
     }
 
+    // parses
     let timestamp = match std::str::from_utf8(timestamp) 
         .ok()
         .and_then(|val| val.trim().parse::<i64>().ok())
@@ -150,6 +152,7 @@ fn validate(
         Err(_) => return INVALID_INPUT,
     };
 
+    // hmac engine update ><
     mac.update(method);
     mac.update(b"|");
     mac.update(uri);
