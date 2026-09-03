@@ -17,7 +17,7 @@ pub const INVALID_DEVICE_ID: i32 = 4;
 pub const INVALID_INPUT: i32 = 5;
 pub const CLOCK_ERROR: i32 = 6;
 
-const TIME_STAMP: i64 = 60;
+const TIMESTAMP_TTL: i64 = 60;
 
 // C extern function for Lua <-- XD
 #[no_mangle]
