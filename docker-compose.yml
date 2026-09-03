@@ -1,0 +1,23 @@
+services:
+  reverse-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: l7-reverse-proxy
+    ports:
+      - "8081:8081"
+    environment:
+      HMAC_SECRET_KEY: "local-test-secret"
+      SECRET_KEY: "local-test-secret"
+      APP_VALIDATOR_LIB: "/usr/local/lib/libapp_validator.so"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    image: eclipse-temurin:21-jre
+    container_name: l7-backend
+    working_dir: /app
+    expose:
+      - "8080"
+    command: ["java", "-jar", "app.jar"]
