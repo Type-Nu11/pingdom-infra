@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [lib]
+name = "app_validator"
+path = "rust/app-validator/src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
