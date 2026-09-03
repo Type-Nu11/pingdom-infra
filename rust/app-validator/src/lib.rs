@@ -46,7 +46,7 @@ pub unsafe extern "C" fn validate_app_request(
     secret: *const u8,
     secret_len: usize,
 ) -> i32 {
-    let result = catch_unwind(AssertUnwindSafe(|| {
+    let result = catch_unwind(AssertUnwindSafe(|| -> Result<i32, i32> {
         let method = read_bytes(method, method_len)?;
         let uri = read_bytes(uri, uri_len)?;
         let timestamp = read_bytes(timestamp, timestamp_len)?;
@@ -56,7 +56,7 @@ pub unsafe extern "C" fn validate_app_request(
         let body = read_bytes(body, body_len)?;
         let secret = read_bytes(secret, secret_len)?;
 
-        validate(
+        Ok(validate(
             method, 
             uri,
             timestamp,
@@ -65,11 +65,12 @@ pub unsafe extern "C" fn validate_app_request(
             device_id,
             body,
             secret
-        )
+        ))
     }));
 
     match result {
-        Ok(code) => code,
+        Ok(Ok(code)) => code,
+        Ok(Err(code)) => code,
         Err(_) => INVALID_INPUT,
     }
 }
