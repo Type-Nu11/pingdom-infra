@@ -1,37 +1,10 @@
-local cjson = require "cjson"
+local guard = require "guard"
 
-local function reject(status, message)
-    ngx.status = status
-    ngx.header.content_type = "application/json"
-    ngx.say(cjson.encode({
-        error = message
-    }))
-    return ngx.exit(status)
+local ngx = ngx
+local result = guard.collect(ngx)
+
+if not result then
+    return "guard failed to collect result"
 end
 
-
-local _M = {}
-
-function _M.collect()
-    local ip = ngx.var.remote_addr or ""
-    local method = ngx.req.get_method() or ""
-    local uri = ngx.var.request_uri or ""
-    local ua = ngx.var.http_user_agent or ""
-
-    local result = {
-        ip = ip,
-        method = method,
-        uri = uri,
-        user_agent = ua
-    }
-
-    for _, val in ipairs(result) do
-        if not val or val == "" then
-            return reject(ngx.HTTP_BAD_REQUEST, "missing required request information")
-        end
-    end
-
-    return result
-end
-
-return _M
+return true
