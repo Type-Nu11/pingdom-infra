@@ -13,7 +13,9 @@ int validate_app_request(
 );
 ]]
 
-local native = ffi.load("/usr/local/lib/libapp_validator.so")
+local library_path = os.getenv("APP_VALIDATOR_LIB") 
+    or "/Users/junhyeok/Documents/Narsha/L7_Proxy/target/release/libapp_validator.dylib"
+local native = ffi.load(library_path)
 
 local _M = {}
 
@@ -49,7 +51,7 @@ function _M.validate(request)
     end
 
     return true
-    
+
 end
 
 return _M

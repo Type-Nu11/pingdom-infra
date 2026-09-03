@@ -1,16 +1,22 @@
+FROM rust:1.85-bookworm AS rust-builder
+
+WORKDIR /build
+COPY Cargo.toml Cargo.lock ./
+COPY rust ./rust
+
+RUN cargo build --release
+
+
 FROM openresty/openresty:alpine
 
-RUN apk add --no-cache curl build-base luarocks5.4
-RUN /usr/bin/luarocks-5.4 install lua-dotenv
+RUN mkdir -p /etc/nginx/configs /src /usr/local/lib /var/log/nginx
 
-WORKDIR /usr/local/openresty/nginx
-
-COPY configs/nginx.conf.template /usr/local/openresty/nginx/nginx.conf
-COPY configs /usr/local/openresty/nginx/configs
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY configs /etc/nginx/configs
 COPY src /src
-COPY database /database
-COPY .env /usr/local/openresty/nginx/.env
+COPY --from=rust-builder /build/target/release/libapp_validator.so \
+    /usr/local/lib/libapp_validator.so
 
-EXPOSE 80
+EXPOSE 8081
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["openresty", "-g", "daemon off;", "-c", "/etc/nginx/nginx.conf"]
