@@ -42,3 +42,15 @@ pub unsafe extern "C" fn verify_jwt(
         Err(_) => JWT_INVALIDE_INPUT
     }
 }
+
+unsafe fn read_bytes<'a>(
+    ptr *const u8,
+    len usize
+) -> Result<&'a [u8], i32> {
+    if len == 0 || ptr.is_null() {
+        return Err(JWT_INVALID_INPUT)
+    }
+
+    Ok(slice::from_raw_parts(ptr, len))
+}
+
