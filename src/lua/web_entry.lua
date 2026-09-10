@@ -20,7 +20,7 @@ local ok, claims_or_error = jwt.verify(token)
 if not ok then
     return response.reject(
         validation_error.status or ngx.HTTP_UNAUTHORIZED,
-        validation_error.message or "invalid JWT"
+        validation_error.message or tostring(claims_or_error)
     )
 end
 
