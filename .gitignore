@@ -41,3 +41,4 @@ Dockerfile
 temp/*
 !temp/.gitkeep
 Cargo.toml
+target
