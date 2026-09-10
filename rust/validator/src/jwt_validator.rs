@@ -33,7 +33,7 @@ pub unsafe extern "C" fn verify_jwt(
         let token = read_bytes(token, token_len)?;
         let secret = read_bytes(secret, secret_len)?;
 
-        Ok(validate_jwt(token, secret));
+        Ok(validate_jwt(token, secret))
     }));
 
     match result {
@@ -51,7 +51,7 @@ unsafe fn read_bytes<'a>(
         return Err(JWT_INVALID_INPUT);
     }
 
-    Ok(slice::from_raw_parts(ptr, len));
+    Ok(slice::from_raw_parts(ptr, len))
 }
 
 fn validate_jwt(token: &[u8], secret: &[u8]) -> i32 {

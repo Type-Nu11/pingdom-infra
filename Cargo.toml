@@ -3,7 +3,6 @@ name = "app-validator"
 version = "0.1.0"
 edition = "2021"
 
-
 [lib]
 name = "app_validator"
 path = "rust/app-validator/src/lib.rs"
@@ -14,4 +13,4 @@ base64 = "0.22"
 hmac = "0.12"
 sha2 = "0.10"
 uuid = "1"
-serder-json = "1"
+serde_json = "1"
