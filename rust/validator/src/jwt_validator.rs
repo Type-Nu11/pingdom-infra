@@ -33,30 +33,30 @@ pub unsafe extern "C" fn verify_jwt(
         let token = read_bytes(token, token_len)?;
         let secret = read_bytes(secret, secret_len)?;
 
-        Ok(validate_jwt(token, secret))
-    }))
+        Ok(validate_jwt(token, secret));
+    }));
 
     match result {
         Ok(Ok(code)) => code,
         Ok(Err(code)) => code,
-        Err(_) => JWT_INVALIDE_INPUT
+        Err(_) => JWT_INVALID_INPUT,
     }
 }
 
 unsafe fn read_bytes<'a>(
-    ptr *const u8,
-    len usize
+    ptr: *const u8,
+    len: usize
 ) -> Result<&'a [u8], i32> {
     if len == 0 || ptr.is_null() {
-        return Err(JWT_INVALID_INPUT)
+        return Err(JWT_INVALID_INPUT);
     }
 
-    Ok(slice::from_raw_parts(ptr, len))
+    Ok(slice::from_raw_parts(ptr, len));
 }
 
-fn validate_jwt(token: $[u8], secret: &[u8]) -> i32 {
+fn validate_jwt(token: &[u8], secret: &[u8]) -> i32 {
     if secret.is_empty() {
-        return JWT_INVALID_INPUT
+        return JWT_INVALID_INPUT;
     }
 
     let token = match std::str::from_utf8(token) {
@@ -149,4 +149,4 @@ fn validate_jwt(token: $[u8], secret: &[u8]) -> i32 {
     }
 
     JWT_VALID
-}a
+}
