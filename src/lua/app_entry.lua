@@ -1,7 +1,7 @@
 local cjson = require "cjson"
-local request = require "lua.request"
+local request = require "lua.app_request"
 local validator = require "lua.rust.validator"
-local response = require "lua.response"
+local response = require "lua.common.response"
 
 
 local req, err = request.build()
