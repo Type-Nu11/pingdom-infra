@@ -42,3 +42,4 @@ temp/*
 !temp/.gitkeep
 Cargo.toml
 target
+zig/guard/.zig-cache
