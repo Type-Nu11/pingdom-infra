@@ -20,7 +20,7 @@ int verify_jwt(
 local path = os.getenv("RUST_VALIDATOR_LIB")
 
 if not path or path == "" then
-    error("APP_VALIDATOR_LIB is not configured")
+    error("RUST_VALIDATOR_LIB is not configured")
 end
 
-return ffi.load()
+return ffi.load(path)

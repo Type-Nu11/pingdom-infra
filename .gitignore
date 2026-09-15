@@ -43,3 +43,5 @@ temp/*
 Cargo.toml
 target
 zig/guard/.zig-cache
+zig/guard/.zig-cache-global
+zig/guard/zig-out

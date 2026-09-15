@@ -25,6 +25,11 @@ local errors = {
     [22] = "user-agent too long",
     [23] = "body too large",
     [24] = "invalid control character",
+    [25] = "null byte detected",
+    [26] = "CRLF injection detected",
+    [27] = "path traversal detected",
+    [28] = "double encoding detected",
+    [29] = "invalid control character detected"
 }
 
 function _M.inspect(req)

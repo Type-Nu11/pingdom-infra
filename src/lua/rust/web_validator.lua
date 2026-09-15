@@ -21,10 +21,12 @@ function _M.verify(token)
 
     if result ~= 0 then
         return false, {
-            status = 500,
+            status = 401,
             message = "invalid JWT"
         }
     end
 
-    
+    return true
 end
+
+return _M
