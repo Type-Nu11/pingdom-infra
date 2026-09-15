@@ -8,8 +8,9 @@ services:
       - "8081:8081"
     environment:
       HMAC_SECRET_KEY: "local-test-secret"
-      SECRET_KEY: "local-test-secret"
-      APP_VALIDATOR_LIB: "/usr/local/lib/libapp_validator.so"
+      JWT_SECRET_KEY: "local-test-secret"
+      RUST_VALIDATOR_LIB: "/usr/local/lib/libapp_validator.so"
+      WEB_GUARD_LIB: "/usr/local/lib/libweb_guard.so"
     depends_on:
       - backend
     restart: unless-stopped
@@ -20,4 +21,6 @@ services:
     working_dir: /app
     expose:
       - "8080"
+    volumes:
+      - ./backend/app.jar:/app/app.jar:ro
     command: ["java", "-jar", "app.jar"]
