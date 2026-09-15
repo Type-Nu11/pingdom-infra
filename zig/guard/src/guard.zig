@@ -119,11 +119,11 @@ fn has_invalid_control_character(value: []const u8) bool {
 fn has_path_traversal(uri: []const u8) bool {
     var i: usize = 0;
 
-    while (i < uri.len) : (i += 1) {
-        if (i + 2 < uri.len and
+    while (i < uri.len) : (i+=1) {
+        if (i+2 < uri.len and
             uri[i] == '.' and
-            uri[i + 1] == '.' and
-            (uri[i + 2] == '/' or uri[i + 2] == '\\'))
+            uri[i+1] == '.' and
+            (uri[i+2] == '/' or uri[i+2] == '\\'))
         {
             return true;
         }
@@ -152,3 +152,40 @@ fn has_path_traversal(uri: []const u8) bool {
     return false;
 }
 
+fn has_double_encondig(uri: []const u8) bool {
+    var i: usize = 0;
+
+    while (i+2 < uri.len) : (i+=1) {
+        if (uri[i] != "%") {
+            continue;
+        }
+
+        const first = hex_value(uri[i+1]);
+        const second = hex_value(uri[i+2]);
+
+        if (first == null or second == null) {
+            continue;
+        }
+
+        const decoded = (first.? << 4) | second.?; // 4 비트로 미루는 작업
+
+        if (decoded == '%' and i+5 < uri.len and uri[i+3] == '%') {
+            if (hex_value(uri[i + 4]) != null and
+                hex_value(uri[i + 5]) != null)
+            {
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+fn hex_value(byte: u8) ?u8 {
+    return switch (byte) {
+        '0'...'9' => byte - '0',
+        'a'...'f' => byte - 'a' + 10,
+        'A'...'F' => byte - 'A' + 10,
+        else => null,
+    };
+}
