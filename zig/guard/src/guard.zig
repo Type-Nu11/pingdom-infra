@@ -39,7 +39,7 @@ export fn inspect_web_request(
         return GUARD_USER_AGENT_TOO_LONG;
     }
 
-    if (body_len == 0 or body_len > MAX_BODY_LEN) {
+    if (body_len > MAX_BODY_LEN) {
         return GUARD_BODY_TOO_LARGE;
     }
 
