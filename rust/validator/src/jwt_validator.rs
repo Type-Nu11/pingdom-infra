@@ -61,7 +61,7 @@ fn validate_jwt(token: &[u8], secret: &[u8]) -> i32 {
 
     let token = match std::str::from_utf8(token) {
         Ok(value) => value,
-        Err(_) => JWT_INVALID_FORMAT,
+        Err(_) => return JWT_INVALID_FORMAT,
     };
 
     // split

@@ -1,6 +1,6 @@
 local request = require("lua.web_request")
 local response = require("lua.common.response")
-local jwt = require("lua.common.jwt")
+local jwt = require("lua.rust.web_validator")
 local guard = require("lua.zig.guard")
 
 local req, err = request.build()
@@ -19,8 +19,8 @@ end
 local ok, claims_or_error = jwt.verify(token)
 if not ok then
     return response.reject(
-        validation_error.status or ngx.HTTP_UNAUTHORIZED,
-        validation_error.message or tostring(claims_or_error)
+        claims_or_error.status or ngx.HTTP_UNAUTHORIZED,
+        claims_or_error.message or tostring(claims_or_error)
     )
 end
 
