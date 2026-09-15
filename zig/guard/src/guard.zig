@@ -155,7 +155,7 @@ fn has_path_traversal(uri: []const u8) bool {
 fn has_double_encoding(uri: []const u8) bool {
     var i: usize = 0;
 
-    while (i+2 < uri.len) : (i+=1) {
+    while (i+4 < uri.len) : (i += 1) {
         if (uri[i] != '%') {
             continue;
         }
@@ -169,12 +169,24 @@ fn has_double_encoding(uri: []const u8) bool {
 
         const decoded = (first.? << 4) | second.?; // 4 비트로 미루는 작업
 
-        if (decoded == '%' and i+5 < uri.len and uri[i+3] == '%') {
-            if (hex_value(uri[i + 4]) != null and
-                hex_value(uri[i + 5]) != null)
-            {
-                return true;
-            }
+        if (decoded != '%') {
+            continue;
+        }
+
+        const nested_first = hex_value(uri[i+3]);
+        const nested_second = hex_value(uri[i+4]);
+
+        if (nested_first == null or nested_second == null) {
+            continue;
+        }
+
+        const nested = (nested_first.? << 4) | nested_second.?;
+
+        if (nested == '.' or
+            nested == '/' or
+            nested == '\\')
+        {
+            return true;
         }
     }
     
