@@ -35,6 +35,7 @@ if guard.inspect then
         -- )
 
         return mysterio.isolate(
+            req,
             guard_error.message or "request isolated"
         )
     end
