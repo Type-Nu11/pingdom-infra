@@ -9,6 +9,8 @@ services:
     environment:
       HMAC_SECRET_KEY: "local-test-secret"
       JWT_SECRET_KEY: "local-test-secret"
+      AI_API_KEY: "${AI_API_KEY}"
+      AI_API_HOST: "api.groq.com"
       RUST_VALIDATOR_LIB: "/usr/local/lib/libapp_validator.so"
       WEB_GUARD_LIB: "/usr/local/lib/libweb_guard.so"
     depends_on:
