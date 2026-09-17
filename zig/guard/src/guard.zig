@@ -58,9 +58,8 @@ export fn inspect_web_request(
         return GUARD_NULL_BYTE;
     }
 
-    if (has_invalid_control_character(method) or
-        has_invalid_control_character(uri) or
-        has_invalid_control_character(user_agent)) 
+    if (has_invalid_control_character(uri) or
+        has_encoded_control_character(uri))
     {
         return GUARD_CONTROL_CHARACTER;
     }
@@ -114,6 +113,31 @@ fn has_invalid_control_character(value: []const u8) bool {
 
     return false;
 
+}
+
+fn has_encoded_control_character(uri: []const u8) bool {
+    var i: usize = 0;
+
+    while (i + 2 < uri.len) : (i += 1) {
+        if (uri[i] != '%') {
+            continue;
+        }
+
+        const first = hex_value(uri[i + 1]);
+        const second = hex_value(uri[i + 2]);
+
+        if (first == null or second == null) {
+            continue;
+        }
+
+        const decoded = (first.? << 4) | second.?;
+
+        if (decoded < 0x20 or decoded == 0x7f) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 fn has_path_traversal(uri: []const u8) bool {
