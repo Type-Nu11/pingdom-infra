@@ -5,7 +5,7 @@ import json
 import time
 
 
-SECRET_KEY = "local-test-secret"
+SECRET_KEY = "0123456789abcdef" * 4
 
 
 def encode(data: bytes) -> str:
@@ -13,7 +13,7 @@ def encode(data: bytes) -> str:
 
 
 header = {
-    "alg": "HS256",
+    "alg": "HS512",
     "typ": "JWT",
 }
 
@@ -38,7 +38,7 @@ signing_input = f"{encoded_header}.{encoded_payload}".encode()
 signature = hmac.new(
     SECRET_KEY.encode(),
     signing_input,
-    hashlib.sha256,
+    hashlib.sha512,
 ).digest()
 
 token = ".".join(

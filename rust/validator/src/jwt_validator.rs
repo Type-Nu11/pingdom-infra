@@ -156,10 +156,10 @@ mod tests {
     use super::*;
     const SECRET: &[u8] = b"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     // Python 표준 HMAC으로 만든 독립 fixture. 운영 토큰이나 키를 사용하지 않는다.
-    const VALID: &str = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.aGvAcl5r0AVesb56UNGdxgqJttb3uPbNaDr6Ev82HR6_lm5CwP1av6AwyO7ZOkkbtPFjFbyAHWLVavHoyJ1TEw";
-    const HS256: &str = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.zNTSmGoLbj-q0XPGIO9zud5ozzJSUcWdeprqGiE2O_8";
-    const EXPIRED: &str = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MCwiZXhwIjoxfQ.EjUho6gdwVWApUTwzNcQKENO5-VyF3pIDGQQitmHgOy6Egg0AVNi8L4PNk98TuGgZthM7fNcM-bHJM9ymKEo3A";
-    const FUTURE: &str = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6NDEwMjQ0NDcwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.Filwgl8Clj1LhLKkI6PPgVvYWkESeAEp_loi5j_yWw2VbrDvvMZLZBy2EI2Gfq_zj14wx31gWEcWiq48XsVN8Q";
+    const VALID: &str = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.PD2VD1kegTJaIa32AzFK0rDN2VLx4Gg-tXIPijg0SKfJRapxVxvng8T81bMC_E7XwU8AC-qRSGYpHi7eynkyMg";
+    const HS256: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.OzwUkHuzsGA-_5yYsi-kaoToYflEHyqr1DN455rx49o";
+    const EXPIRED: &str = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MCwiZXhwIjoxfQ.tAaFy3nWO83sbVsnGjYe-SrKQ1P2pZsqcIxkzOadYTOri80eRsysrHQVn72X7yE8j0XNEp9Clxc5vuiCbvQ2PQ";
+    const FUTURE: &str = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6NDEwMjQ0NDcwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.ik1dvNOwqMm4dpYr5el2JeUedfikpfi-MG5B_L2IPPtdO4kJ7hyhVn5AMNnXhH3Fq8shJFsP2py3zGhDn61WhQ";
 
     #[test]
     fn accepts_hs512_through_ffi() {
