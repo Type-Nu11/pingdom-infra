@@ -87,7 +87,8 @@ Lua는 요청 정보를 수집하고, 인증 및 보안 모듈을 호출하며, 
 
 Rust는 메모리 안전성을 기반으로 다음 검증을 담당합니다.
 
-- JWT HS256 서명 검증
+- JWT HS512 서명 검증 (Spring 발급 규격과 일치, 다른 알고리즘은 거절)
+- `JWT_SECRET_KEY`는 Spring `JWT_SECRET`과 동일한 원문 문자열을 사용합니다. Base64 디코딩하지 않습니다.
 - JWT `exp` 및 `iat` 검증
 - 앱 요청 HMAC 검증
 - Rust shared library FFI 제공
