@@ -292,3 +292,24 @@ curl -i 'http://localhost:8081/%252e%252e'
 이 프로젝트의 사용 및 배포 조건은 저장소의 `LICENSE` 파일을 따릅니다.
 
 Part of Pingdom.
+
+### 앱 JWT 전환과 조회 경로
+
+`APP_HMAC_ENFORCE=false`를 명시하면 앱 경로의 추가 HMAC 헤더 파싱과
+검증을 생략합니다. 기본값은 `true`이며, 다른 값이나 미설정 상태에서는
+기존 HMAC 검증을 유지합니다. 이 모드에서는 백엔드가 보호 경로의 JWT를
+검증해야 합니다. 이 설정은 웹 경로의 JWT 검증에는 영향을 주지 않습니다.
+
+Compose는 이 변수를 컨테이너에 전달하고, `nginx.conf`의 `env` 지시문은
+worker에 전달합니다. 환경변수 변경은 컨테이너 재생성이 필요하며 reload만으로
+반영되지 않습니다. 운영 적용 시 기존 upstream, 비밀값, 배포 설정을 유지하세요.
+저장소의 loopback upstream을 운영 주소에 덮어쓰지 마세요.
+
+`/places`, `/reservations`는 정확 일치 location으로 직접 전달하며 기존
+하위 경로와 동일한 요청 제한 및 앱 검증을 적용합니다. 요청 URI와 쿼리를
+유지하므로 슬래시 추가를 위한 301과 내부 포트 노출을 피합니다.
+
+로컬 Lua 분기 검증: `lua tests/app_entry_test.lua`.
+실제 OpenResty 적용 전에는 설정 검사와 정상 JWT / 누락 JWT / 만료 JWT의
+조회 검증이 필요합니다. 정상 요청에는 301 및 Location 헤더가 없어야 합니다.
+운영 적용 후 문제가 발생하면 이전 설정·이미지·환경변수로 복원합니다.
