@@ -1,4 +1,9 @@
-local cjson = require "cjson"
+-- JWT-only rollout: Spring remains responsible for authentication on app routes.
+-- Only an explicit false disables HMAC; unset or invalid values fail closed.
+if os.getenv("APP_HMAC_ENFORCE") == "false" then
+    return
+end
+
 local request = require "lua.app_request"
 local validator = require "lua.rust.app_validator"
 local response = require "lua.common.response"
