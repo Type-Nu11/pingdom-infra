@@ -1,7 +1,4 @@
-use base64::{
-    engine::general_purpose::URL_SAFE_NO_PAD,
-    Engine
-};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 
 use hmac::{Hmac, Mac};
 use serde_json::Value;
@@ -27,7 +24,7 @@ pub unsafe extern "C" fn verify_jwt(
     token: *const u8,
     token_len: usize,
     secret: *const u8,
-    secret_len: usize
+    secret_len: usize,
 ) -> i32 {
     let result = catch_unwind(AssertUnwindSafe(|| -> Result<i32, i32> {
         let token = read_bytes(token, token_len)?;
@@ -43,10 +40,7 @@ pub unsafe extern "C" fn verify_jwt(
     }
 }
 
-unsafe fn read_bytes<'a>(
-    ptr: *const u8,
-    len: usize
-) -> Result<&'a [u8], i32> {
+unsafe fn read_bytes<'a>(ptr: *const u8, len: usize) -> Result<&'a [u8], i32> {
     if len == 0 || ptr.is_null() {
         return Err(JWT_INVALID_INPUT);
     }
@@ -68,7 +62,7 @@ fn validate_jwt(token: &[u8], secret: &[u8]) -> i32 {
     let mut parts = token.split('.');
 
     // formatting
-    let header_encoded = match parts.next(){
+    let header_encoded = match parts.next() {
         Some(value) => value,
         None => return JWT_INVALID_FORMAT,
     };
@@ -84,7 +78,7 @@ fn validate_jwt(token: &[u8], secret: &[u8]) -> i32 {
     };
 
     if parts.next().is_some() {
-        return JWT_INVALID_FORMAT
+        return JWT_INVALID_FORMAT;
     }
 
     // decode
@@ -154,36 +148,84 @@ fn validate_jwt(token: &[u8], secret: &[u8]) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    const SECRET: &[u8] = b"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    // Python 표준 HMAC으로 만든 독립 fixture. 운영 토큰이나 키를 사용하지 않는다.
+
+    const SECRET: &[u8] =
+        b"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
     const VALID: &str = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.PD2VD1kegTJaIa32AzFK0rDN2VLx4Gg-tXIPijg0SKfJRapxVxvng8T81bMC_E7XwU8AC-qRSGYpHi7eynkyMg";
+
     const HS256: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.OzwUkHuzsGA-_5yYsi-kaoToYflEHyqr1DN455rx49o";
+
     const EXPIRED: &str = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6MCwiZXhwIjoxfQ.tAaFy3nWO83sbVsnGjYe-SrKQ1P2pZsqcIxkzOadYTOri80eRsysrHQVn72X7yE8j0XNEp9Clxc5vuiCbvQ2PQ";
+
     const FUTURE: &str = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsInJvbGUiOiJBRE1JTiIsImlhdCI6NDEwMjQ0NDcwMCwiZXhwIjo0MTAyNDQ0ODAwfQ.ik1dvNOwqMm4dpYr5el2JeUedfikpfi-MG5B_L2IPPtdO4kJ7hyhVn5AMNnXhH3Fq8shJFsP2py3zGhDn61WhQ";
 
     #[test]
     fn accepts_hs512_through_ffi() {
-        assert_eq!(unsafe { verify_jwt(VALID.as_ptr(), VALID.len(), SECRET.as_ptr(), SECRET.len()) }, JWT_VALID);
+        assert_eq!(
+            unsafe {
+                verify_jwt(
+                    VALID.as_ptr(),
+                    VALID.len(),
+                    SECRET.as_ptr(),
+                    SECRET.len()
+                )
+            },
+            JWT_VALID
+        );
     }
 
     #[test]
-    fn rejects_hs256_and_unsigned_algorithm() {
-        assert_eq!(validate_jwt(HS256.as_bytes(), SECRET), JWT_INVALID_ALGORITHM);
-        let none = format!("{}.{}.AA", URL_SAFE_NO_PAD.encode(br#"{"alg":"none"}"#), VALID.split('.').nth(1).unwrap());
-        assert_eq!(validate_jwt(none.as_bytes(), SECRET), JWT_INVALID_ALGORITHM);
+    fn rejects_hs256_and_none_algorithm() {
+        assert_eq!(
+            validate_jwt(HS256.as_bytes(), SECRET),
+            JWT_INVALID_ALGORITHM
+        );
+
+        let none = format!(
+            "{}.{}.AA",
+            URL_SAFE_NO_PAD.encode(br#"{"alg":"none"}"#),
+            VALID.split('.').nth(1).unwrap()
+        );
+
+        assert_eq!(
+            validate_jwt(none.as_bytes(), SECRET),
+            JWT_INVALID_ALGORITHM
+        );
     }
 
     #[test]
     fn rejects_wrong_key_and_tampered_payload() {
-        assert_eq!(validate_jwt(VALID.as_bytes(), &[b'x'; 64]), JWT_INVALID_SIGNATURE);
+        assert_eq!(
+            validate_jwt(VALID.as_bytes(), &[b'x'; 64]),
+            JWT_INVALID_SIGNATURE
+        );
+
         let parts: Vec<_> = VALID.split('.').collect();
-        let altered = format!("{}.{}.{}", parts[0], URL_SAFE_NO_PAD.encode(br#"{"sub":"2","exp":4102444800}"#), parts[2]);
-        assert_eq!(validate_jwt(altered.as_bytes(), SECRET), JWT_INVALID_SIGNATURE);
+
+        let altered = format!(
+            "{}.{}.{}",
+            parts[0],
+            URL_SAFE_NO_PAD.encode(br#"{"sub":"2","exp":4102444800}"#),
+            parts[2]
+        );
+
+        assert_eq!(
+            validate_jwt(altered.as_bytes(), SECRET),
+            JWT_INVALID_SIGNATURE
+        );
     }
 
     #[test]
     fn preserves_expiration_and_future_issued_at_checks() {
-        assert_eq!(validate_jwt(EXPIRED.as_bytes(), SECRET), JWT_EXPIRED);
-        assert_eq!(validate_jwt(FUTURE.as_bytes(), SECRET), JWT_NOT_YET_VALID);
+        assert_eq!(
+            validate_jwt(EXPIRED.as_bytes(), SECRET),
+            JWT_EXPIRED
+        );
+
+        assert_eq!(
+            validate_jwt(FUTURE.as_bytes(), SECRET),
+            JWT_NOT_YET_VALID
+        );
     }
 }

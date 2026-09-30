@@ -57,14 +57,14 @@ pub unsafe extern "C" fn validate_app_request(
         let secret = read_bytes(secret, secret_len)?;
 
         Ok(validate(
-            method, 
+            method,
             uri,
             timestamp,
             signature,
             app_version,
             device_id,
             body,
-            secret
+            secret,
         ))
     }));
 
@@ -103,7 +103,7 @@ fn validate(
     }
 
     // parses
-    let timestamp = match std::str::from_utf8(timestamp) 
+    let timestamp = match std::str::from_utf8(timestamp)
         .ok()
         .and_then(|val| val.trim().parse::<i64>().ok())
     {
