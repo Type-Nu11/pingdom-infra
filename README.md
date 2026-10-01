@@ -166,6 +166,38 @@ Gateway 로그 확인:
 docker compose logs -f reverse-proxy
 ```
 
+### GitHub Actions Deployment
+
+`.github/workflows/deploy-l7.yml` deploys automatically when changes reach `main`.
+It can also be started manually from **Actions → Deploy L7 Proxy**, selecting a branch.
+The instance checkout is cloned when absent and otherwise updated with a fast-forward-only pull.
+The workflow refuses to overwrite a dirty checkout and only recreates the `reverse-proxy`
+service, leaving the backend service untouched.
+
+Configure these repository Actions secrets before enabling deployment:
+
+Go to **GitHub repository → Settings → Secrets and variables → Actions → New repository secret**
+and add the following names exactly as shown. The workflow does not discover or trust an SSH host
+key automatically.
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_HOST` | Instance DNS name or IP address |
+| `DEPLOY_USER` | SSH deployment account |
+| `DEPLOY_PATH` | Absolute checkout path, for example `/home/<user>/L7_Proxy` |
+| `DEPLOY_SSH_KEY` | Private SSH key for the deployment account |
+| `DEPLOY_KNOWN_HOSTS` | Pinned SSH host-key line for the instance |
+
+Obtain the host key from the instance/admin console and verify its fingerprint out-of-band before
+adding the complete `known_hosts` line as `DEPLOY_KNOWN_HOSTS`. Do not trust an unverified
+`ssh-keyscan` result. The private key belongs only in `DEPLOY_SSH_KEY`; neither key should be
+committed to this repository.
+
+The instance must have Git, Docker Compose, the production `.env`, and a running Docker daemon.
+The deploy account must be able to run `sudo -n docker compose` without an interactive password
+(or have equivalent Docker permissions). Keep production secrets in the instance `.env`; do not
+put them in the repository or workflow file.
+
 기본 테스트 주소:
 
 ```text
