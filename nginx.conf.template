@@ -1,16 +1,15 @@
 worker_processes 1;
 error_log logs/error.log info;
 pid logs/nginx.pid;
-env HMAC_SECRET_KEY;
 env WEB_GUARD_LIB;
 env RUST_VALIDATOR_LIB;
 env JWT_SECRET_KEY;
+env APP_MIN_VERSION;
 env BACKEND_HOST;
 env BACKEND_PORT;
 env REDIS_HOST;
 env REDIS_PORT;
 env AI_API_KEY;
-env APP_HMAC_ENFORCE;
 
 events {
     worker_connections 1024;
@@ -25,6 +24,7 @@ http {
     server {
         listen 8081;
         server_name web_proxy;
+        absolute_redirect off;
 
         include configs/conf.d/web/locations.conf;
         include configs/conf.d/shared/mysterio.conf;
@@ -34,8 +34,10 @@ http {
     server {
         listen 8082;
         server_name app_proxy;
+        absolute_redirect off;
 
         include configs/conf.d/app/locations.conf;
+        include configs/conf.d/app/ai.conf;
         include configs/conf.d/shared/mysterio.conf;
     }
 }

@@ -18,7 +18,7 @@ OpenResty Gateway
  ├─ App Proxy
  ├─ Lua: 요청 흐름·라우팅 제어
  ├─ Zig: 저수준 악성 요청 탐지
- └─ Rust: JWT·HMAC 인증 검증
+ └─ Rust: JWT 검증 및 앱 메타데이터 유효성 검사
     ↓
 Backend Server
 ```
@@ -54,7 +54,7 @@ Docker 기반 Gateway 실행 환경과 Web/App 요청 흐름을 구성했으며,
 - HAProxy 기반 글로벌 트래픽 제어
 - OpenResty Web/App Proxy 구성
 - Lua 기반 요청 수집·라우팅·응답 처리
-- Rust FFI 기반 JWT·HMAC 검증
+- Rust FFI 기반 JWT 및 앱 헤더 검증
 - Zig FFI 기반 악성 요청 탐지
 - URI·Method·User-Agent 구조 검사
 - NULL byte·제어문자·CRLF 차단
@@ -90,7 +90,10 @@ Rust는 메모리 안전성을 기반으로 다음 검증을 담당합니다.
 - JWT HS512 서명 검증 (Spring 발급 규격과 일치, 다른 알고리즘은 거절)
 - `JWT_SECRET_KEY`는 Spring `JWT_SECRET`과 동일한 원문 문자열을 사용합니다. Base64 디코딩하지 않습니다.
 - JWT `exp` 및 `iat` 검증
-- 앱 요청 HMAC 검증
+- `X-Timestamp` freshness, `X-App-Version` 최소 버전, `X-Device-Id` UUID 검증
+- `APP_MIN_VERSION`보다 낮은 앱 버전 거절 (기본값 `0.0.0`)
+- 검증된 앱 헤더는 Backend로 전달합니다.
+- Timestamp freshness만으로는 서명/nonce 없는 재전송 공격을 막지 못합니다.
 - Rust shared library FFI 제공
 
 ### Zig Request Guard

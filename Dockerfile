@@ -40,6 +40,6 @@ COPY --from=zig-builder \
     /build/zig/guard/zig-out/lib/libweb_guard.so \
     /usr/local/lib/libweb_guard.so
 
-EXPOSE 8081
+EXPOSE 8081 8082
 
 CMD ["/usr/local/bin/render-nginx-config"]
