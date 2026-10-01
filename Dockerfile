@@ -22,11 +22,15 @@ RUN cd zig/guard && \
 
 FROM openresty/openresty:alpine
 
+RUN apk add --no-cache gettext
+
 WORKDIR /app
 
-COPY nginx.conf /etc/nginx/nginx.conf
-COPY configs /etc/nginx/configs
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+COPY configs /etc/nginx/config-templates
 COPY src /src
+COPY docker-entrypoint.sh /usr/local/bin/render-nginx-config
+RUN chmod +x /usr/local/bin/render-nginx-config
 
 COPY --from=rust-builder \
     /build/target/release/libapp_validator.so \
@@ -38,4 +42,4 @@ COPY --from=zig-builder \
 
 EXPOSE 8081
 
-CMD ["openresty", "-c", "/etc/nginx/nginx.conf", "-g", "daemon off;"]
+CMD ["/usr/local/bin/render-nginx-config"]
