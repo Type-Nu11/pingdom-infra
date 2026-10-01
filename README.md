@@ -327,3 +327,23 @@ curl -i 'http://localhost:8081/%252e%252e'
 이 프로젝트의 사용 및 배포 조건은 저장소의 `LICENSE` 파일을 따릅니다.
 
 Part of Pingdom.
+
+### 앱 요청 검증과 조회 경로
+
+앱 프록시는 `X-Timestamp`, `X-App-Version`, `X-Device-Id` 헤더를 검사하고
+보호 경로에서는 JWT도 검증합니다. `/auth/` 경로는 로그인·토큰 발급을 위해
+앱 헤더/JWT 검증을 거치지 않습니다. 최소 허용 앱 버전은 `APP_MIN_VERSION`
+으로 설정하며 기본값은 `0.0.0`입니다. 레거시 `X-SignatureBase64` HMAC은
+검증하지 않습니다.
+
+환경변수 변경은 컨테이너 재생성이 필요하며 reload만으로 반영되지 않습니다.
+운영 적용 시 기존 upstream, 비밀값, 배포 설정을 유지하세요.
+
+`/places`, `/reservations`는 정확 일치 location으로 직접 전달하며 기존
+하위 경로와 동일한 요청 제한 및 앱 검증을 적용합니다. 요청 URI와 쿼리를
+유지하므로 슬래시 추가를 위한 301과 내부 포트 노출을 피합니다.
+
+로컬 Lua 진입점 검증: `lua tests/app_entry_test.lua`.
+실제 OpenResty 적용 전에는 설정 검사와 정상 JWT / 누락 JWT / 만료 JWT의
+조회 검증이 필요합니다. 정상 요청에는 301 및 Location 헤더가 없어야 합니다.
+운영 적용 후 문제가 발생하면 이전 설정·이미지·환경변수로 복원합니다.
