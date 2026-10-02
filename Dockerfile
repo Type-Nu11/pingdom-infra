@@ -22,7 +22,9 @@ RUN cd zig/guard && \
 
 FROM openresty/openresty:alpine
 
-RUN apk add --no-cache gettext
+# Rust's cdylib is built against glibc; OpenResty Alpine is musl-based.
+# gcompat provides the glibc loader/symbol compatibility required by LuaJIT FFI.
+RUN apk add --no-cache gettext gcompat
 
 WORKDIR /app
 
