@@ -22,7 +22,9 @@ RUN cd zig/guard && \
 
 FROM openresty/openresty:alpine
 
-RUN apk add --no-cache gettext
+# Rust's cdylib is built against glibc; OpenResty Alpine is musl-based.
+# gcompat provides the glibc loader/symbol compatibility required by LuaJIT FFI.
+RUN apk add --no-cache gettext gcompat
 
 WORKDIR /app
 
@@ -40,6 +42,6 @@ COPY --from=zig-builder \
     /build/zig/guard/zig-out/lib/libweb_guard.so \
     /usr/local/lib/libweb_guard.so
 
-EXPOSE 8081
+EXPOSE 8081 8082
 
 CMD ["/usr/local/bin/render-nginx-config"]

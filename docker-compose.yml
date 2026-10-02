@@ -6,15 +6,15 @@ services:
     container_name: l7-reverse-proxy
     ports:
       - "8081:8081"
+      - "8082:8082"
     environment:
-      HMAC_SECRET_KEY: "${HMAC_SECRET_KEY:-}"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-}"
+      APP_MIN_VERSION: "${APP_MIN_VERSION:-0.0.0}"
       BACKEND_HOST: "${BACKEND_HOST:-backend}"
       BACKEND_PORT: "${BACKEND_PORT:-8080}"
       REDIS_HOST: "${REDIS_HOST:-}"
       REDIS_PORT: "${REDIS_PORT:-6379}"
       AI_API_KEY: "${AI_API_KEY:-}"
-      APP_HMAC_ENFORCE: "${APP_HMAC_ENFORCE:-false}"
       RUST_VALIDATOR_LIB: "${RUST_VALIDATOR_LIB:-/usr/local/lib/libapp_validator.so}"
       WEB_GUARD_LIB: "${WEB_GUARD_LIB:-/usr/local/lib/libweb_guard.so}"
     depends_on:

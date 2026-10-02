@@ -1,0 +1,140 @@
+name: Deploy L7 Proxy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Git branch to deploy on the instance
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l7-proxy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Pull and deploy on instance
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      DEPLOY_BRANCH: ${{ github.event.inputs.branch || github.ref_name }}
+
+    steps:
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_PATH DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DEPLOY_BRANCH; do
+            if [[ -z "${!name}" ]]; then
+              echo "Required GitHub Actions secret/input is missing: ${name}" >&2
+              exit 1
+            fi
+          done
+
+          if [[ "${DEPLOY_PATH}" != /* || "${DEPLOY_PATH}" == "/" ]]; then
+            echo "DEPLOY_PATH must be an absolute, non-root path" >&2
+            exit 1
+          fi
+          if [[ ! "${DEPLOY_HOST}" =~ ^[A-Za-z0-9.-]+$ || ! "${DEPLOY_USER}" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]]; then
+            echo "DEPLOY_HOST or DEPLOY_USER contains unsupported characters" >&2
+            exit 1
+          fi
+          if [[ ! "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9_./-]+$ || "${DEPLOY_PATH}" == *"/../"* || "${DEPLOY_PATH}" == */.. ]]; then
+            echo "DEPLOY_PATH contains unsupported characters or parent-directory traversal" >&2
+            exit 1
+          fi
+          if [[ ! "${DEPLOY_BRANCH}" =~ ^[A-Za-z0-9_./-]+$ ]]; then
+            echo "DEPLOY_BRANCH contains unsupported characters" >&2
+            exit 1
+          fi
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Pull and deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_command="sh -s -- '${DEPLOY_PATH}' '${DEPLOY_BRANCH}'"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" "$remote_command" <<'REMOTE_SCRIPT'
+          set -eu
+
+          deploy_path=$1
+          deploy_branch=$2
+          repository_url='https://github.com/Type-Nu11/pingdom-infra.git'
+
+          if [ ! -d "$deploy_path/.git" ]; then
+              if [ -e "$deploy_path" ] && [ -n "$(find "$deploy_path" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+                  echo "Deployment path exists and is not an empty Git checkout: $deploy_path" >&2
+                  exit 1
+              fi
+              mkdir -p "$(dirname "$deploy_path")"
+              git clone --branch "$deploy_branch" --single-branch "$repository_url" "$deploy_path"
+          else
+              origin_url=$(git -C "$deploy_path" remote get-url origin)
+              case "$origin_url" in
+                  https://github.com/Type-Nu11/pingdom-infra.git|https://github.com/Type-Nu11/pingdom-infra) ;;
+                  *)
+                      echo "Unexpected origin URL in deployment checkout: $origin_url" >&2
+                      exit 1
+                      ;;
+              esac
+
+              if [ -n "$(git -C "$deploy_path" status --porcelain)" ]; then
+                  echo "Deployment checkout has local changes; refusing to overwrite them." >&2
+                  exit 1
+              fi
+
+              git -C "$deploy_path" fetch origin "$deploy_branch"
+              if git -C "$deploy_path" show-ref --verify --quiet "refs/heads/$deploy_branch"; then
+                  git -C "$deploy_path" checkout "$deploy_branch"
+              else
+                  git -C "$deploy_path" checkout --track -b "$deploy_branch" "origin/$deploy_branch"
+              fi
+              git -C "$deploy_path" pull --ff-only origin "$deploy_branch"
+          fi
+
+          cd "$deploy_path"
+          if [ ! -s .env ]; then
+              echo "Missing deployment .env file; provision production settings before deploying." >&2
+              exit 1
+          fi
+
+          sudo -n docker compose config --quiet
+          sudo -n docker compose up -d --build --no-deps reverse-proxy
+          sudo -n docker compose exec -T reverse-proxy openresty -t
+
+          web_status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8081/)
+          app_status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8082/users/me)
+
+          if [ "$web_status" != "401" ]; then
+              echo "Unexpected web listener smoke-test status: $web_status (expected 401 without JWT)" >&2
+              exit 1
+          fi
+          if [ "$app_status" != "400" ]; then
+              echo "Unexpected app listener smoke-test status: $app_status (expected 400 without app metadata)" >&2
+              exit 1
+          fi
+
+          echo "Deployment and listener smoke tests passed (web=$web_status, app=$app_status)."
+          REMOTE_SCRIPT

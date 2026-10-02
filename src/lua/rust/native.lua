@@ -1,10 +1,7 @@
 local ffi = require("ffi")
 
 ffi.cdef[[
-int validate_app_request(
-    const uint8_t*, size_t,
-    const uint8_t*, size_t,
-    const uint8_t*, size_t,
+int validate_app_headers(
     const uint8_t*, size_t,
     const uint8_t*, size_t,
     const uint8_t*, size_t,

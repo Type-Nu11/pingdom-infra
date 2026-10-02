@@ -18,7 +18,7 @@ OpenResty Gateway
  ├─ App Proxy
  ├─ Lua: 요청 흐름·라우팅 제어
  ├─ Zig: 저수준 악성 요청 탐지
- └─ Rust: JWT·HMAC 인증 검증
+ └─ Rust: JWT 검증 및 앱 메타데이터 유효성 검사
     ↓
 Backend Server
 ```
@@ -54,7 +54,7 @@ Docker 기반 Gateway 실행 환경과 Web/App 요청 흐름을 구성했으며,
 - HAProxy 기반 글로벌 트래픽 제어
 - OpenResty Web/App Proxy 구성
 - Lua 기반 요청 수집·라우팅·응답 처리
-- Rust FFI 기반 JWT·HMAC 검증
+- Rust FFI 기반 JWT 및 앱 헤더 검증
 - Zig FFI 기반 악성 요청 탐지
 - URI·Method·User-Agent 구조 검사
 - NULL byte·제어문자·CRLF 차단
@@ -90,7 +90,10 @@ Rust는 메모리 안전성을 기반으로 다음 검증을 담당합니다.
 - JWT HS512 서명 검증 (Spring 발급 규격과 일치, 다른 알고리즘은 거절)
 - `JWT_SECRET_KEY`는 Spring `JWT_SECRET`과 동일한 원문 문자열을 사용합니다. Base64 디코딩하지 않습니다.
 - JWT `exp` 및 `iat` 검증
-- 앱 요청 HMAC 검증
+- `X-Timestamp` freshness, `X-App-Version` 최소 버전, `X-Device-Id` UUID 검증
+- `APP_MIN_VERSION`보다 낮은 앱 버전 거절 (기본값 `0.0.0`)
+- 검증된 앱 헤더는 Backend로 전달합니다.
+- Timestamp freshness만으로는 서명/nonce 없는 재전송 공격을 막지 못합니다.
 - Rust shared library FFI 제공
 
 ### Zig Request Guard
@@ -162,6 +165,38 @@ Gateway 로그 확인:
 ```bash
 docker compose logs -f reverse-proxy
 ```
+
+### GitHub Actions Deployment
+
+`.github/workflows/deploy-l7.yml` deploys automatically when changes reach `main`.
+It can also be started manually from **Actions → Deploy L7 Proxy**, selecting a branch.
+The instance checkout is cloned when absent and otherwise updated with a fast-forward-only pull.
+The workflow refuses to overwrite a dirty checkout and only recreates the `reverse-proxy`
+service, leaving the backend service untouched.
+
+Configure these repository Actions secrets before enabling deployment:
+
+Go to **GitHub repository → Settings → Secrets and variables → Actions → New repository secret**
+and add the following names exactly as shown. The workflow does not discover or trust an SSH host
+key automatically.
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_HOST` | Instance DNS name or IP address |
+| `DEPLOY_USER` | SSH deployment account |
+| `DEPLOY_PATH` | Absolute checkout path, for example `/home/<user>/L7_Proxy` |
+| `DEPLOY_SSH_KEY` | Private SSH key for the deployment account |
+| `DEPLOY_KNOWN_HOSTS` | Pinned SSH host-key line for the instance |
+
+Obtain the host key from the instance/admin console and verify its fingerprint out-of-band before
+adding the complete `known_hosts` line as `DEPLOY_KNOWN_HOSTS`. Do not trust an unverified
+`ssh-keyscan` result. The private key belongs only in `DEPLOY_SSH_KEY`; neither key should be
+committed to this repository.
+
+The instance must have Git, Docker Compose, the production `.env`, and a running Docker daemon.
+The deploy account must be able to run `sudo -n docker compose` without an interactive password
+(or have equivalent Docker permissions). Keep production secrets in the instance `.env`; do not
+put them in the repository or workflow file.
 
 기본 테스트 주소:
 
@@ -293,23 +328,22 @@ curl -i 'http://localhost:8081/%252e%252e'
 
 Part of Pingdom.
 
-### 앱 JWT 전환과 조회 경로
+### 앱 요청 검증과 조회 경로
 
-`APP_HMAC_ENFORCE=false`를 명시하면 앱 경로의 추가 HMAC 헤더 파싱과
-검증을 생략합니다. 기본값은 `true`이며, 다른 값이나 미설정 상태에서는
-기존 HMAC 검증을 유지합니다. 이 모드에서는 백엔드가 보호 경로의 JWT를
-검증해야 합니다. 이 설정은 웹 경로의 JWT 검증에는 영향을 주지 않습니다.
+앱 프록시는 `X-Timestamp`, `X-App-Version`, `X-Device-Id` 헤더를 검사하고
+보호 경로에서는 JWT도 검증합니다. `/auth/` 경로는 로그인·토큰 발급을 위해
+앱 헤더/JWT 검증을 거치지 않습니다. 최소 허용 앱 버전은 `APP_MIN_VERSION`
+으로 설정하며 기본값은 `0.0.0`입니다. 레거시 `X-SignatureBase64` HMAC은
+검증하지 않습니다.
 
-Compose는 이 변수를 컨테이너에 전달하고, `nginx.conf`의 `env` 지시문은
-worker에 전달합니다. 환경변수 변경은 컨테이너 재생성이 필요하며 reload만으로
-반영되지 않습니다. 운영 적용 시 기존 upstream, 비밀값, 배포 설정을 유지하세요.
-저장소의 loopback upstream을 운영 주소에 덮어쓰지 마세요.
+환경변수 변경은 컨테이너 재생성이 필요하며 reload만으로 반영되지 않습니다.
+운영 적용 시 기존 upstream, 비밀값, 배포 설정을 유지하세요.
 
 `/places`, `/reservations`는 정확 일치 location으로 직접 전달하며 기존
 하위 경로와 동일한 요청 제한 및 앱 검증을 적용합니다. 요청 URI와 쿼리를
 유지하므로 슬래시 추가를 위한 301과 내부 포트 노출을 피합니다.
 
-로컬 Lua 분기 검증: `lua tests/app_entry_test.lua`.
+로컬 Lua 진입점 검증: `lua tests/app_entry_test.lua`.
 실제 OpenResty 적용 전에는 설정 검사와 정상 JWT / 누락 JWT / 만료 JWT의
 조회 검증이 필요합니다. 정상 요청에는 301 및 Location 헤더가 없어야 합니다.
 운영 적용 후 문제가 발생하면 이전 설정·이미지·환경변수로 복원합니다.
