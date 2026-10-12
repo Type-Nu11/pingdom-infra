@@ -347,3 +347,44 @@ Part of Pingdom.
 실제 OpenResty 적용 전에는 설정 검사와 정상 JWT / 누락 JWT / 만료 JWT의
 조회 검증이 필요합니다. 정상 요청에는 301 및 Location 헤더가 없어야 합니다.
 운영 적용 후 문제가 발생하면 이전 설정·이미지·환경변수로 복원합니다.
+
+### 앱 AI 대화 라우팅
+
+`POST /ai/chat`은 앱 인증·메타데이터 검사 후 `${BACKEND_HOST}:${BACKEND_PORT}`의
+Spring `AiChatController`로 전달합니다. 기존 AI 요청·연결 제한과 timeout을
+유지하며 앱의 Bearer JWT, JSON 본문, `X-Request-Id`를 보존합니다. 모델 선택과
+provider 인증은 Spring이 담당합니다. 이 경로는 Gateway의 `AI_API_KEY`를
+사용하지 않으며 앱 요청에 `model`을 추가하지 않습니다.
+
+요청 예시 (`ACCESS_TOKEN`, `APP_VERSION`, `DEVICE_ID`는 앱의 기존 값):
+
+```bash
+curl 'https://www.typenull.xyz/ai/chat' \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  -H 'X-Client-Type: App' \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-Id: req_ai_chat_example' \
+  -H "X-Timestamp: $(date +%s)" \
+  -H "X-App-Version: ${APP_VERSION}" \
+  -H "X-Device-Id: ${DEVICE_ID}" \
+  --data '{"messages":[{"role":"user","content":"Hello"}],"tools":[]}'
+```
+
+`X-Timestamp`, `X-App-Version`, `X-Device-Id`는 기존 앱 Gateway 검사 항목입니다.
+도구가 있을 때에는 공개 `AiChatRequest` 명세의 `tools`를 함께 전달합니다.
+응답은 Spring의 `content`와 `tool_calls`이며 `function.arguments`는 JSON
+object입니다. Groq의 `choices` 응답이나 문자열 인자 계약으로 앱을 변경하지 않습니다.
+
+라우팅 회귀 검증: `python3 tests/ai_chat_proxy_test.py`.
+이미 설치된 `openresty/openresty:alpine` 이미지로 임시 컨테이너를 실행하고
+종료 시 제거합니다. 원본 Nginx include 및 Lua 인증 흐름을 사용해 본문·JWT·
+메타데이터·추적 헤더 전달, 도구 응답, 백엔드 400/502, 인증 거절을 검증합니다.
+Rust FFI만 fixture로 대체하므로 실제 JWT 암호 검증·만료 판정·TLS·운영 배포는
+별도 검증해야 합니다.
+
+운영 적용 전에는 기존 upstream과 인증 설정을 유지한 렌더링 결과에서
+`/ai/chat`이 Spring으로 전달되는지 `openresty -T`로 확인하고 설정 검사를
+실행합니다. 적용 후 실제 앱 요청의 `X-Request-Id` 응답 헤더와 `content`/
+`tool_calls`를 확인합니다. 과거 로그에 전달받은 추적 ID가 기록되지 않았다면
+ID 검색 결과만으로 컨트롤러 도달 여부를 판단하지 말고 시각·경로와 실제
+upstream 설정을 함께 대조합니다.
