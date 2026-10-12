@@ -10,6 +10,7 @@ env BACKEND_PORT;
 env REDIS_HOST;
 env REDIS_PORT;
 env AI_API_KEY;
+env AI_MODEL;
 
 events {
     worker_connections 1024;

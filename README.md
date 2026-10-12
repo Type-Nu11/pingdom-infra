@@ -350,11 +350,16 @@ Part of Pingdom.
 
 ### 앱 AI 대화 라우팅
 
-`POST /ai/chat`은 앱 인증·메타데이터 검사 후 `${BACKEND_HOST}:${BACKEND_PORT}`의
-Spring `AiChatController`로 전달합니다. 기존 AI 요청·연결 제한과 timeout을
-유지하며 앱의 Bearer JWT, JSON 본문, `X-Request-Id`를 보존합니다. 모델 선택과
-provider 인증은 Spring이 담당합니다. 이 경로는 Gateway의 `AI_API_KEY`를
-사용하지 않으며 앱 요청에 `model`을 추가하지 않습니다.
+`POST /ai/chat`은 앱 JWT·메타데이터 검사 후 프록시에서 Groq의
+`/openai/v1/chat/completions`를 호출합니다. 공개 `AiChatRequest` /
+`AiChatResponse` 형식은 프록시의 Lua 어댑터가 처리하며, AI 요청·연결 제한과
+기존 timeout을 유지합니다.
+
+모델은 서버 환경변수 `AI_MODEL`로 선택하며 기본값은 GPT-OSS 20B의
+`openai/gpt-oss-20b`입니다. Groq API 키는 기존 `AI_API_KEY`를 사용합니다.
+앱은 `model` 없이 `messages`와 선택적인 `tools`를 보냅니다. 모델·stream 등
+공개 계약에 없는 provider 옵션과 URL 쿼리는 Groq에 전달하지 않습니다.
+Groq 호출은 항상 비스트리밍입니다.
 
 요청 예시 (`ACCESS_TOKEN`, `APP_VERSION`, `DEVICE_ID`는 앱의 기존 값):
 
@@ -370,21 +375,55 @@ curl 'https://www.typenull.xyz/ai/chat' \
   --data '{"messages":[{"role":"user","content":"Hello"}],"tools":[]}'
 ```
 
-`X-Timestamp`, `X-App-Version`, `X-Device-Id`는 기존 앱 Gateway 검사 항목입니다.
-도구가 있을 때에는 공개 `AiChatRequest` 명세의 `tools`를 함께 전달합니다.
-응답은 Spring의 `content`와 `tool_calls`이며 `function.arguments`는 JSON
-object입니다. Groq의 `choices` 응답이나 문자열 인자 계약으로 앱을 변경하지 않습니다.
+일반 답변:
 
-라우팅 회귀 검증: `python3 tests/ai_chat_proxy_test.py`.
-이미 설치된 `openresty/openresty:alpine` 이미지로 임시 컨테이너를 실행하고
-종료 시 제거합니다. 원본 Nginx include 및 Lua 인증 흐름을 사용해 본문·JWT·
-메타데이터·추적 헤더 전달, 도구 응답, 백엔드 400/502, 인증 거절을 검증합니다.
-Rust FFI만 fixture로 대체하므로 실제 JWT 암호 검증·만료 판정·TLS·운영 배포는
-별도 검증해야 합니다.
+```json
+{"content":"Hello","tool_calls":[]}
+```
 
-운영 적용 전에는 기존 upstream과 인증 설정을 유지한 렌더링 결과에서
-`/ai/chat`이 Spring으로 전달되는지 `openresty -T`로 확인하고 설정 검사를
-실행합니다. 적용 후 실제 앱 요청의 `X-Request-Id` 응답 헤더와 `content`/
-`tool_calls`를 확인합니다. 과거 로그에 전달받은 추적 ID가 기록되지 않았다면
-ID 검색 결과만으로 컨트롤러 도달 여부를 판단하지 말고 시각·경로와 실제
-upstream 설정을 함께 대조합니다.
+도구 응답:
+
+```json
+{"tool_calls":[{"id":"call_example","type":"function","function":{"name":"searchNearbyPlaces","arguments":{"keyword":"갈비탕"}}}]}
+```
+
+`messages`는 최대 50개이며 `user`, `assistant`, `tool`을 지원합니다. `tools`는
+최대 20개의 function 정의를 지원합니다. 도구 호출의 `function.arguments`는
+앱 요청·응답에서 JSON object입니다. 프록시는 Groq의 문자열 인자를 object로
+해석하고, 앱이 보내는 assistant 호출 이력의 object 인자를 JSON 문자열로
+변환합니다. `tool` 메시지의 object/array 결과도 JSON 문자열로 변환합니다.
+도구 전용 응답에서 텍스트가 없으면 `content`를 생략합니다.
+
+Groq의 `choices[0].message`만 공개 응답으로 변환하며, 등록되지 않은 도구,
+잘못된 인자 JSON, 중복 호출 ID, 잘린 응답은 `502 PROVIDER_RESPONSE_INVALID`로
+거절합니다. 앱 입력 오류는 400, 지원하지 않는 메서드는 405, JSON 외의
+Content-Type은 415입니다. 키/모델 설정 오류는 503, Groq 호출 실패는 502,
+Groq의 요청 제한은 429로 반환합니다. 오류는 `{"error":"코드"}` 형식이며
+provider 응답 원문을 노출하지 않습니다. 기존 앱 인증 오류 처리는 유지합니다.
+
+앱 JWT는 인증에만 사용합니다. 내부 Groq location은 외부 접근을 차단하며,
+Groq에는 API 키와 JSON 본문, 추적 ID만 전달합니다. 앱 Cookie·메타데이터는
+전달하지 않습니다. Groq TLS 인증서와 호스트를 검증합니다. JSON 요청 본문은
+1 MiB로 제한하고, 내부 subrequest에서 비스트리밍 응답 전체를 수집한 뒤
+2 MiB를 초과하면 거절합니다.
+
+`X-Request-Id`는 영문/숫자/밑줄/하이픈으로 이루어진 최대 128자의 값이면
+응답과 Groq 요청에 보존합니다. 없거나 유효하지 않으면 Nginx ID를 사용합니다.
+AI 처리 로그에는 추적 ID, provider, 성공 모델, HTTP 상태, 고정된 결과 코드만
+기록하고 JWT·API 키·사용자 본문·provider 응답은 기록하지 않습니다.
+
+회귀 검증: `python3 tests/ai_chat_proxy_test.py`.
+이미 설치된 `openresty/openresty:alpine` 이미지로 임시 컨테이너 1개와 로컬
+HTTPS Groq fixture를 실행하고 종료 시 제거합니다. 원본 Nginx include 및
+Lua 인증 흐름으로 모델 주입, 요청/응답 변환, 도구 후속 메시지, 내부 경로
+차단, 인증 거절, 잘못된 provider 응답과 안전한 추적 로그를 검증합니다.
+Rust FFI와 provider만 fixture로 대체하므로 실제 JWT 암호 검증·만료 판정,
+Groq 계정의 모델 접근, 운영 TLS·배포는 별도 검증해야 합니다.
+
+운영 적용 전 `.env`의 `AI_API_KEY`와 `AI_MODEL=openai/gpt-oss-20b`를 확인합니다.
+환경변수 반영에는 컨테이너 재생성이 필요합니다. 렌더링 결과의 `/ai/chat`이
+Lua 처리기로, 내부 경로가 Groq로 연결되는지 `openresty -T`로 확인하고
+설정 검사를 실행합니다. 적용 후 실제 앱 요청으로 응답 형식과 추적 로그를
+확인합니다. 문제가 발생하면 이전 이미지·설정·환경변수로 복원합니다.
+
+모델 ID와 도구 호출 지원: [Groq GPT-OSS 20B 문서](https://console.groq.com/docs/model/openai/gpt-oss-20b).
