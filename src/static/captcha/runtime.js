@@ -8,11 +8,13 @@
   const errorMessage = document.getElementById("pingcha-error");
   const scriptUrl = document.currentScript.src;
   let active = false;
+  let completionTimer;
   let worker;
   let frameSizer;
   if (embedded && window.parent !== window) {
     frameSizer = new ResizeObserver(([entry]) => {
-      window.parent.postMessage({type: "pingcha:resize", height: entry.contentRect.height}, location.origin);
+      // Allow a little room for focus outlines and fractional pixel rounding.
+      window.parent.postMessage({type: "pingcha:resize", height: Math.ceil(entry.contentRect.height) + 8}, location.origin);
     });
     frameSizer.observe(root.parentElement);
   }
@@ -42,6 +44,10 @@
 
   function complete() {
     widget.setState("success");
+    completionTimer = setTimeout(finish, 1000);
+  }
+
+  function continueAfterSuccess() {
     root.dispatchEvent(new CustomEvent("pingcha:verified", {bubbles: true}));
     if (embedded) {
       if (window.parent !== window) window.parent.postMessage({type: "pingcha:verified"}, location.origin);
@@ -56,6 +62,8 @@
   }
 
   function disabled() {
+    clearTimeout(completionTimer);
+    completionTimer = undefined;
     root.hidden = true;
     if (embedded && window.parent !== window) {
       window.parent.postMessage({type: "pingcha:disabled"}, location.origin);
@@ -63,7 +71,7 @@
   }
 
   async function verify() {
-    if (active) return;
+    if (active || completionTimer !== undefined) return;
     active = true;
     errorMessage.hidden = true;
     widget.setState("verifying");
@@ -92,8 +100,33 @@
     } finally { active = false; }
   }
 
+  async function finish() {
+    completionTimer = undefined;
+    active = true;
+    errorMessage.hidden = true;
+    try {
+      // Recheck the server cookie before releasing the waiting login page.
+      const status = await request("status");
+      if (status.enabled === false) return disabled();
+      if (status.verified !== true) {
+        widget.setState("idle");
+        errorMessage.textContent = "인증 시간이 지났어요. 체크박스를 눌러 다시 만나 주세요.";
+        errorMessage.hidden = false;
+        return;
+      }
+      continueAfterSuccess();
+    } catch (_) {
+      widget.setState("idle");
+      errorMessage.textContent = "확인하지 못했어요. 체크박스를 다시 눌러 주세요.";
+      errorMessage.hidden = false;
+    } finally {
+      active = false;
+    }
+  }
+
   root.addEventListener("pingdom:verify", verify);
   window.addEventListener("pagehide", () => {
+    clearTimeout(completionTimer);
     if (worker) worker.terminate();
     if (frameSizer) frameSizer.disconnect();
     widget.destroy();
@@ -104,5 +137,5 @@
     errorMessage.hidden = false;
     return;
   }
-  verify();
+  // Verification starts only after the checkbox emits pingdom:verify.
 })();

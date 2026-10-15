@@ -25,7 +25,7 @@ class PingCha {
   }
 
   setState(state) {
-    const labels = { idle: "Verify you are human", verifying: "Verifying...", success: "Success!" };
+    const labels = { idle: "Verify you are human", verifying: "Verifying...", success: "인증되었습니다" };
     if (!Object.hasOwn(labels, state)) throw new TypeError("Unknown CAPTCHA state");
     this.state = state;
     this.root.dataset.state = state;
