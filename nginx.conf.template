@@ -10,6 +10,7 @@ env BACKEND_PORT;
 env REDIS_HOST;
 env REDIS_PORT;
 env AI_API_KEY;
+env PINGCHA_ENABLED;
 
 events {
     worker_connections 1024;
@@ -17,6 +18,12 @@ events {
 
 http {
     lua_package_path "/src/?.lua;/src/?/init.lua;;";
+    lua_shared_dict pingcha_challenges 2m;
+    lua_shared_dict pingcha_clearances 2m;
+    # Only web HTML needs an uncompressed, unconditional body for injection.
+    map "${PINGCHA_ENABLED}:$server_port" $pingcha_accept_encoding { "true:8081" ""; default $http_accept_encoding; }
+    map "${PINGCHA_ENABLED}:$server_port" $pingcha_if_none_match { "true:8081" ""; default $http_if_none_match; }
+    map "${PINGCHA_ENABLED}:$server_port" $pingcha_if_modified_since { "true:8081" ""; default $http_if_modified_since; }
 
     include configs/conf.d/http/logging.conf;
     include configs/conf.d/http/ratelimit.conf;
@@ -25,8 +32,27 @@ http {
         listen 8081;
         server_name web_proxy;
         absolute_redirect off;
+        # Public web locations inherit PingCha; JWT locations retain their own handler.
+        access_by_lua_file /src/lua/pingcha_entry.lua;
+        header_filter_by_lua_block { require("lua.pingcha_html").header() }
+        body_filter_by_lua_block { require("lua.pingcha_html").body() }
 
         include configs/conf.d/web/locations.conf;
+        include configs/conf.d/web/pingcha.conf;
+        location ^~ /_pingdom/captcha/ {
+            alias /src/static/captcha/;
+            index index.html;
+            types {
+                text/html html;
+                text/css css;
+                application/javascript js;
+                image/svg+xml svg;
+                font/woff2 woff2;
+                text/plain txt md;
+            }
+            add_header Cache-Control "no-store" always;
+            add_header X-Content-Type-Options nosniff always;
+        }
         include configs/conf.d/shared/mysterio.conf;
         
     }
