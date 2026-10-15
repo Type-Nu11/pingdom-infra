@@ -1,3 +1,8 @@
+-- Preflight has no Bearer token; the backend still validates the Origin.
+if ngx.req.get_method() == "OPTIONS" then
+    return
+end
+
 local request = require("lua.web_request")
 local response = require("lua.common.response")
 local jwt = require("lua.rust.web_validator")
@@ -40,4 +45,3 @@ if guard.inspect then
         )
     end
 end
-

@@ -12,6 +12,8 @@ services:
       APP_MIN_VERSION: "${APP_MIN_VERSION:-0.0.0}"
       BACKEND_HOST: "${BACKEND_HOST:-backend}"
       BACKEND_PORT: "${BACKEND_PORT:-8080}"
+      CONSOLE_HOST: "${CONSOLE_HOST:-}"
+      CONSOLE_PORT: "${CONSOLE_PORT:-8082}"
       REDIS_HOST: "${REDIS_HOST:-}"
       REDIS_PORT: "${REDIS_PORT:-6379}"
       AI_API_KEY: "${AI_API_KEY:-}"

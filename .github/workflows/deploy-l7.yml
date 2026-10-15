@@ -124,7 +124,7 @@ jobs:
           sudo -n docker compose up -d --build --no-deps reverse-proxy
           sudo -n docker compose exec -T reverse-proxy openresty -t
 
-          web_status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8081/)
+          web_status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8081/users/me)
           app_status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8082/users/me)
 
           if [ "$web_status" != "401" ]; then
