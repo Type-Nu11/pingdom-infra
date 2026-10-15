@@ -18,7 +18,9 @@ Figma의 세 상태를 HTML/CSS/JS로 구현했습니다. 원본 디자인 601×
 
 웹 콘솔 upstream의 Accept-Encoding 및 조건부 캐시 헤더를 제거해 수정 가능한 HTML을 요청하고, 수정 응답은 no-store로 전달합니다. 필터는 성공한 text/html만 수정하며 전체 HTML을 버퍼링하지 않습니다. JSON, CSS, 이미지 및 앱 프록시 응답에는 스크립트를 삽입하지 않습니다. CSP 응답 헤더는 기존 제한을 보존하면서 로더/스타일 nonce와 same-origin iframe/connect 소스만 추가합니다. upstream이 압축 금지를 무시하거나 HTML meta CSP 또는 sandbox로 스크립트를 제한하면 추가 설정이 필요합니다. 압축된 응답은 손상시키지 않고 삽입을 건너뛰며 경고를 기록합니다. 로그인 API의 서버 검증은 이 경우에도 유지됩니다.
 
-페이지 진입 시 runtime.js가 백그라운드 검증을 시작합니다. 서버가 발급한 120초짜리 일회용 nonce에 대해 Worker가 SHA-256 10비트 작업 증명을 계산합니다. Worker는 한 개만 실행하며 한 번에 최대 16,384회/1.5초, 응답 대기는 2.5초로 제한합니다. 실패 시 자동 반복하지 않고 체크박스로 재시도합니다. 서버에서 증명과 User-Agent를 확인하고 원자적으로 소모한 뒤 15분짜리 `__Host-pingcha` 쿠키(Secure, HttpOnly, SameSite=Lax)를 발급합니다. 브라우저가 쿠키를 수락한 것도 확인한 후 성공으로 표시합니다.
+체크박스를 클릭하면 runtime.js가 검증을 시작합니다. 클릭 전에는 챌린지를 발급하거나 작업 증명을 계산하지 않습니다. 서버가 발급한 120초짜리 일회용 nonce에 대해 Worker가 SHA-256 10비트 작업 증명을 계산합니다. Worker는 한 개만 실행하며 한 번에 최대 16,384회/1.5초, 응답 대기는 2.5초로 제한합니다. 실패 시 자동 반복하지 않고 체크박스로 재시도합니다. 서버에서 증명과 User-Agent를 확인하고 원자적으로 소모한 뒤 15분짜리 `__Host-pingcha` 쿠키(Secure, HttpOnly, SameSite=Lax)를 발급합니다. 브라우저가 쿠키를 수락한 것도 확인한 후 성공으로 표시합니다.
+
+검증 성공 시 “인증되었습니다”를 약 1초 표시한 뒤 서버 쿠키를 재확인하고 모달을 닫거나 원래 페이지로 이동합니다. 추가 확인 버튼은 없습니다. 페이지를 떠나면 대기 중 타이머를 정리하고, 만료·네트워크 오류 시에는 재시도를 안내합니다.
 
 웹 서버의 공개 location들은 서버 수준 PingCha access handler를 상속합니다. 기존 JWT location은 자체 access handler를 유지합니다. `/auth/`와 `/api/auth/` 요청, 공개 콘솔 HTML 화면, Swagger HTML 및 API 문서 요청이 대상입니다. 헬스체크, 정적 리소스, OPTIONS, refresh/logout 및 OAuth callback은 제외합니다. 앱 서버(8082)에는 적용하지 않습니다. 콘솔 HTML은 모달 방식이며, Swagger HTML은 기존 검증 페이지 복귀 방식입니다. POST/API 요청은 본문을 리다이렉트하지 않고 403 `PINGCHA_REQUIRED`와 `challenge_url`을 반환합니다. 삽입된 로더가 없는 외부 프런트엔드는 이 응답을 처리해 검증 UI를 연 후 사용자가 요청을 다시 제출하도록 해야 합니다.
 
