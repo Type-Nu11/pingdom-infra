@@ -17,6 +17,7 @@ services:
       REDIS_HOST: "${REDIS_HOST:-}"
       REDIS_PORT: "${REDIS_PORT:-6379}"
       AI_API_KEY: "${AI_API_KEY:-}"
+      PINGCHA_ENABLED: "${PINGCHA_ENABLED:-false}"
       RUST_VALIDATOR_LIB: "${RUST_VALIDATOR_LIB:-/usr/local/lib/libapp_validator.so}"
       WEB_GUARD_LIB: "${WEB_GUARD_LIB:-/usr/local/lib/libweb_guard.so}"
     depends_on:

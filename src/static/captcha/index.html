@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>PingCha</title>
+  <link rel="stylesheet" href="captcha.css">
+  <script src="captcha.js" defer></script>
+  <script src="runtime.js" defer></script>
+</head>
+<body class="pingcha-page">
+  <main class="pingcha-embed" aria-label="PingCha 브라우저 검증">
+    <div class="captcha-shell" id="captcha" data-state="idle">
+      <div class="captcha-widget">
+        <button class="captcha-control" type="button" role="checkbox" aria-checked="false" aria-label="Verify you are human">
+          <span class="captcha-checkbox" aria-hidden="true"></span>
+          <img class="captcha-verifying" src="assets/verifying.svg" width="55" height="55" alt="" hidden>
+          <img class="captcha-success" src="assets/success.svg" width="56" height="56" alt="" hidden>
+        </button>
+        <span class="captcha-label" role="status" aria-live="polite" aria-atomic="true">Verify you are human</span>
+        <img class="captcha-logo" src="assets/logo.svg" width="173" height="39" alt="Pingdom">
+      </div>
+    </div>
+    <p class="pingcha-error" id="pingcha-error" role="alert" hidden></p>
+    <noscript>브라우저 검증을 진행하려면 JavaScript를 켜 주세요.</noscript>
+  </main>
+</body>
+</html>
