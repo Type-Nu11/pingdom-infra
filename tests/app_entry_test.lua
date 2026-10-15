@@ -1,5 +1,6 @@
 -- Run from repository root: lua tests/app_entry_test.lua
 local cases = {
+    {name = "OPTIONS delegates CORS without JWT or metadata", method = "OPTIONS", expected_calls = 0},
     {name = "valid app request accepted", ok = true},
     {name = "missing metadata rejected", ok = false, status = 400, message = "missing required header: X-Timestamp"},
     {name = "missing JWT rejected", ok = false, status = 401, message = "missing or invalid authentication token"},
@@ -21,11 +22,14 @@ for _, case in ipairs(cases) do
             status, message = code, reason
         end
     }
-    ngx = {HTTP_BAD_REQUEST = 400, HTTP_UNAUTHORIZED = 401}
+    ngx = {
+        HTTP_BAD_REQUEST = 400, HTTP_UNAUTHORIZED = 401,
+        req = {get_method = function() return case.method or "GET" end}
+    }
 
     dofile("src/lua/app_entry.lua")
 
-    assert(calls == 1, case.name .. ": auth validation calls")
+    assert(calls == (case.expected_calls or 1), case.name .. ": auth validation calls")
     assert(status == case.status, case.name .. ": response status")
     assert(message == case.message, case.name .. ": response message")
     print("PASS " .. case.name)
