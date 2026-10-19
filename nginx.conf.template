@@ -18,6 +18,7 @@ events {
 
 http {
     lua_package_path "/src/?.lua;/src/?/init.lua;;";
+    header_filter_by_lua_block { require("lua.security_headers").apply() }
     lua_shared_dict pingcha_challenges 2m;
     lua_shared_dict pingcha_clearances 2m;
     # Only web HTML needs an uncompressed, unconditional body for injection.
@@ -34,7 +35,10 @@ http {
         absolute_redirect off;
         # Public web locations inherit PingCha; JWT locations retain their own handler.
         access_by_lua_file /src/lua/pingcha_entry.lua;
-        header_filter_by_lua_block { require("lua.pingcha_html").header() }
+        header_filter_by_lua_block {
+            require("lua.pingcha_html").header()
+            require("lua.security_headers").apply()
+        }
         body_filter_by_lua_block { require("lua.pingcha_html").body() }
 
         include configs/conf.d/web/locations.conf;
@@ -51,7 +55,6 @@ http {
                 text/plain txt md;
             }
             add_header Cache-Control "no-store" always;
-            add_header X-Content-Type-Options nosniff always;
         }
         include configs/conf.d/shared/mysterio.conf;
         
