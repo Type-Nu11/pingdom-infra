@@ -204,6 +204,20 @@ put them in the repository or workflow file.
 http://localhost:8081
 ```
 
+## Remote MCP Routing
+
+웹 리스너의 정확한 `/mcp` 경로는 Spring API 대신 `MCP_HOST:MCP_PORT`로 전달합니다.
+기본값은 `BACKEND_HOST:8081`이며, 운영 MCP가 다른 호스트에 있으면 `.env`의 `MCP_HOST`를 설정합니다.
+`/mcp` 경로와 query string은 그대로 유지합니다.
+
+기존 `web_entry.lua`의 JWT 검증과 요청 제한을 적용하며, 사용자 `Authorization: Bearer <JWT>`와
+MCP 서비스의 `mcp-token` 헤더를 함께 전달합니다. 토큰은 프록시 환경변수에 저장하지 않습니다.
+Streamable HTTP/SSE 응답을 위해 HTTP/1.1, 버퍼링 및 캐시 비활성화, 300초 읽기 제한을 사용합니다.
+
+설정 반영에는 `reverse-proxy` 이미지 재빌드와 컨테이너 재생성이 필요합니다.
+배포 후 유효한 두 인증 헤더로 `https://www.typenull.xyz/mcp`의 MCP 초기화와 `tools/list` 응답을 확인합니다.
+인증 없는 401 응답만으로는 MCP upstream 연결 성공을 확인할 수 없습니다.
+
 ## Configuration
 
 주요 설정 파일:
