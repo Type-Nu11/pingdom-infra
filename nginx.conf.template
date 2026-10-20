@@ -44,7 +44,7 @@ http {
 
         # Render branded error pages only on the web proxy.
         proxy_intercept_errors on;
-        error_page 404 /404.html;
+        error_page 404 =302 /?error=true;
 
         include configs/conf.d/web/locations.conf;
         include configs/conf.d/web/pingcha.conf;
@@ -59,12 +59,6 @@ http {
                 font/woff2 woff2;
                 text/plain txt md;
             }
-            add_header Cache-Control "no-store" always;
-        }
-        location = /404.html {
-            internal;
-            alias /src/static/404.html;
-            default_type text/html;
             add_header Cache-Control "no-store" always;
         }
         include configs/conf.d/shared/mysterio.conf;
