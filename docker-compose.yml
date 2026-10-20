@@ -6,8 +6,8 @@ services:
     container_name: l7-reverse-proxy
     ports:
       # Same-host Rust edge is the only public entry point.
-      - "127.0.0.1:8081:8081"
-      - "127.0.0.1:8082:8082"
+      - "8081:8081"
+      - "8082:8082"
     environment:
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-}"
       APP_MIN_VERSION: "${APP_MIN_VERSION:-0.0.0}"
