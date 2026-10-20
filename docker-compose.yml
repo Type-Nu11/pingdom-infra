@@ -5,8 +5,9 @@ services:
       dockerfile: Dockerfile
     container_name: l7-reverse-proxy
     ports:
-      - "8081:8081"
-      - "8082:8082"
+      # Same-host Rust edge is the only public entry point.
+      - "127.0.0.1:8081:8081"
+      - "127.0.0.1:8082:8082"
     environment:
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-}"
       APP_MIN_VERSION: "${APP_MIN_VERSION:-0.0.0}"
@@ -33,3 +34,12 @@ services:
     volumes:
       - ./backend/app.jar:/app/app.jar:ro
     command: ["java", "-jar", "app.jar"]
+
+# Pin the host-side bridge address used by the real-IP trust policy.
+# If this subnet conflicts with the host/VPC, change it and real_ip.conf together.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.79.0/24
+          gateway: 172.30.79.1

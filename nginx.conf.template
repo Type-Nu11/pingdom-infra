@@ -28,10 +28,14 @@ http {
 
     include configs/conf.d/http/logging.conf;
     include configs/conf.d/http/ratelimit.conf;
+    include configs/conf.d/http/swagger_access.conf;
+    include configs/conf.d/http/real_ip.conf;
     
     server {
         listen 8081;
         server_name web_proxy;
+        # Rewrite phase runs before redirects, authentication and upstream access.
+        if ($swagger_denied) { return 403; }
         absolute_redirect off;
         # Public web locations inherit PingCha; JWT locations retain their own handler.
         access_by_lua_file /src/lua/pingcha_entry.lua;
@@ -63,6 +67,7 @@ http {
     server {
         listen 8082;
         server_name app_proxy;
+        if ($swagger_denied) { return 403; }
         absolute_redirect off;
 
         include configs/conf.d/app/locations.conf;
