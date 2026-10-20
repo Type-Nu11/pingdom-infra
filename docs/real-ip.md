@@ -7,7 +7,7 @@ replaces client-supplied `X-Real-IP` with the TCP peer IP, and forwards to
 
 L7 publishes these ports on loopback only. Its dedicated Docker bridge has
 gateway `172.30.79.1`; only that exact address may supply `X-Real-IP`.
-The restored `$remote_addr` is used by Swagger access control, logs and rate
+The restored `$remote_addr` is used by logs and rate
 limits. Arbitrary `X-Forwarded-For` is not trusted. All local host processes
 remain within the trust boundary. Keep host firewall/security groups closed
 for direct external access to L7 ports and bridge/container addresses.
@@ -22,9 +22,8 @@ the client's actual IP. The original gateway peer is available through
 `$realip_remote_addr` for diagnostics. Do not broaden trust if the observed
 address differs: inspect the deployed Docker networking first.
 
-Swagger requests from `34.127.98.202` must pass IP filtering; another source
-must receive 403 even if it supplies `X-Real-IP: 34.127.98.202` to the public
-edge. PingCha or application authentication may still apply after IP filtering.
+Swagger has no source-IP allowlist. Existing PingCha or application
+authentication may still apply.
 
 The legacy HAProxy TLS-passthrough/PROXY-v2 configuration in L4_Proxy is a
 different deployment path and is not covered by this X-Real-IP setup. It needs
