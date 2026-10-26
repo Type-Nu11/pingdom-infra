@@ -1,5 +1,3 @@
-# Pingdom Infrastructure & Gateway
-
 ![Pingdom Gateway Architecture](https://github.com/user-attachments/assets/945c1072-21d6-45c6-938d-21aabaea3beb)
 
 ## Overview
@@ -107,7 +105,7 @@ Zig는 요청 초입에서 저비용 바이트 검사를 수행합니다.
 - Path Traversal 탐지
 - Double Encoding 탐지
 
-## Technology
+## Technology and Tools
 
 | Category | Technology |
 |---|---|
@@ -135,7 +133,9 @@ git clone https://github.com/Type-Nu11/pingdom-infra.git
 cd pingdom-infra
 ```
 
-### Build
+### Usage
+
+이미지를 빌드합니다.
 
 ```bash
 docker compose build
@@ -148,7 +148,7 @@ libapp_validator.so
 libweb_guard.so
 ```
 
-### Run
+컨테이너를 실행합니다.
 
 ```bash
 docker compose up -d
@@ -165,6 +165,35 @@ Gateway 로그 확인:
 ```bash
 docker compose logs -f reverse-proxy
 ```
+
+기본 테스트 주소:
+
+```text
+http://localhost:8081
+```
+
+## Configuration
+
+주요 설정 파일:
+
+```text
+nginx.conf.template
+docker-compose.yml
+Dockerfile
+configs/conf.d/
+src/lua/
+rust/validator/
+zig/guard/
+```
+
+네이티브 라이브러리 경로는 다음 환경변수로 전달됩니다.
+
+```text
+RUST_VALIDATOR_LIB
+WEB_GUARD_LIB
+```
+
+인증 키와 비밀 값은 저장소에 커밋하지 않습니다.
 
 ### GitHub Actions Deployment
 
@@ -198,13 +227,7 @@ The deploy account must be able to run `sudo -n docker compose` without an inter
 (or have equivalent Docker permissions). Keep production secrets in the instance `.env`; do not
 put them in the repository or workflow file.
 
-기본 테스트 주소:
-
-```text
-http://localhost:8081
-```
-
-## Remote MCP Routing
+### Remote MCP Routing
 
 웹 리스너의 정확한 `/mcp` 경로는 Spring API 대신 `MCP_HOST:MCP_PORT`로 전달합니다.
 기본값은 `BACKEND_HOST:8081`이며, 운영 MCP가 다른 호스트에 있으면 `.env`의 `MCP_HOST`를 설정합니다.
@@ -218,28 +241,25 @@ Streamable HTTP/SSE 응답을 위해 HTTP/1.1, 버퍼링 및 캐시 비활성화
 배포 후 유효한 두 인증 헤더로 `https://www.typenull.xyz/mcp`의 MCP 초기화와 `tools/list` 응답을 확인합니다.
 인증 없는 401 응답만으로는 MCP upstream 연결 성공을 확인할 수 없습니다.
 
-## Configuration
+### 앱 요청 검증과 조회 경로
 
-주요 설정 파일:
+앱 프록시는 `X-Timestamp`, `X-App-Version`, `X-Device-Id` 헤더를 검사하고
+보호 경로에서는 JWT도 검증합니다. `/auth/` 경로는 로그인·토큰 발급을 위해
+앱 헤더/JWT 검증을 거치지 않습니다. 최소 허용 앱 버전은 `APP_MIN_VERSION`
+으로 설정하며 기본값은 `0.0.0`입니다. 레거시 `X-SignatureBase64` HMAC은
+검증하지 않습니다.
 
-```text
-nginx.conf
-docker-compose.yml
-Dockerfile
-configs/conf.d/
-src/lua/
-rust/validator/
-zig/guard/
-```
+환경변수 변경은 컨테이너 재생성이 필요하며 reload만으로 반영되지 않습니다.
+운영 적용 시 기존 upstream, 비밀값, 배포 설정을 유지하세요.
 
-네이티브 라이브러리 경로는 다음 환경변수로 전달됩니다.
+`/places`, `/reservations`는 정확 일치 location으로 직접 전달하며 기존
+하위 경로와 동일한 요청 제한 및 앱 검증을 적용합니다. 요청 URI와 쿼리를
+유지하므로 슬래시 추가를 위한 301과 내부 포트 노출을 피합니다.
 
-```text
-RUST_VALIDATOR_LIB
-WEB_GUARD_LIB
-```
-
-인증 키와 비밀 값은 저장소에 커밋하지 않습니다.
+로컬 Lua 진입점 검증: `lua tests/app_entry_test.lua`.
+실제 OpenResty 적용 전에는 설정 검사와 정상 JWT / 누락 JWT / 만료 JWT의
+조회 검증이 필요합니다. 정상 요청에는 301 및 Location 헤더가 없어야 합니다.
+운영 적용 후 문제가 발생하면 이전 설정·이미지·환경변수로 복원합니다.
 
 ## Verification
 
@@ -289,7 +309,7 @@ curl -i 'http://localhost:8081/%252e%252e'
 .
 ├── Dockerfile
 ├── docker-compose.yml
-├── nginx.conf
+├── nginx.conf.template
 ├── Cargo.toml
 ├── Cargo.lock
 ├── configs
@@ -320,14 +340,7 @@ curl -i 'http://localhost:8081/%252e%252e'
         └── zig
 ```
 
-## Related Repositories
-
-| Repository | Relationship |
-|---|---|
-| `pingdom-server` | Gateway를 통해 요청을 전달받는 Backend Server |
-| `pingdom-mcp` | AI 기반 데이터 처리 및 MCP 서비스 연동 |
-
-## Architecture Principles
+### Architecture Principles
 
 - HAProxy는 함대 전체의 연결과 트래픽을 제어합니다.
 - OpenResty는 Web/App 요청별 정책과 라우팅을 담당합니다.
@@ -336,28 +349,38 @@ curl -i 'http://localhost:8081/%252e%252e'
 - Rust는 인증과 암호 검증을 담당합니다.
 - 백엔드에는 검증된 요청만 전달합니다.
 
+## Related Repositories
+
+| Repository | Relationship |
+|---|---|
+| [pingdom-api](https://github.com/Type-Nu11/pingdom-api) | Gateway를 통해 요청을 전달받는 백엔드 API |
+| [pingdom-mcp](https://github.com/Type-Nu11/pingdom-mcp) | AI 기반 데이터 처리 및 MCP 서비스 |
+| [pingdom-loadbalancer](https://github.com/Type-Nu11/pingdom-loadbalancer) | Gateway 앞단의 트래픽 진입점 |
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| [Console Proxy](docs/console-proxy.md) | 콘솔 프록시 구성 |
+| [Real IP](docs/real-ip.md) | 원본 클라이언트 IP 처리 |
+| [Change Log](CHANGELOG.md) | 구성 변경 이력 |
+
+## Release and Compatibility
+
+현재 개발 및 통합 테스트 단계입니다.
+
+변경사항은 저장소의 Release 또는 Git 변경 이력을 기준으로 확인합니다.
+호환성에 영향을 주는 변경사항은 관련 문서와 변경 이력을 통해 안내합니다.
+설정·환경변수 변경 시 이미지 재빌드와 컨테이너 재생성이 필요한 항목을 확인합니다.
+
 ## License
 
-이 프로젝트의 사용 및 배포 조건은 저장소의 `LICENSE` 파일을 따릅니다.
+이 프로젝트의 사용 및 배포 조건은 [MIT License](LICENSE)를 따릅니다.
 
-Part of Pingdom.
+---
 
-### 앱 요청 검증과 조회 경로
+<div align="center">
 
-앱 프록시는 `X-Timestamp`, `X-App-Version`, `X-Device-Id` 헤더를 검사하고
-보호 경로에서는 JWT도 검증합니다. `/auth/` 경로는 로그인·토큰 발급을 위해
-앱 헤더/JWT 검증을 거치지 않습니다. 최소 허용 앱 버전은 `APP_MIN_VERSION`
-으로 설정하며 기본값은 `0.0.0`입니다. 레거시 `X-SignatureBase64` HMAC은
-검증하지 않습니다.
+Part of **Pingdom**
 
-환경변수 변경은 컨테이너 재생성이 필요하며 reload만으로 반영되지 않습니다.
-운영 적용 시 기존 upstream, 비밀값, 배포 설정을 유지하세요.
-
-`/places`, `/reservations`는 정확 일치 location으로 직접 전달하며 기존
-하위 경로와 동일한 요청 제한 및 앱 검증을 적용합니다. 요청 URI와 쿼리를
-유지하므로 슬래시 추가를 위한 301과 내부 포트 노출을 피합니다.
-
-로컬 Lua 진입점 검증: `lua tests/app_entry_test.lua`.
-실제 OpenResty 적용 전에는 설정 검사와 정상 JWT / 누락 JWT / 만료 JWT의
-조회 검증이 필요합니다. 정상 요청에는 301 및 Location 헤더가 없어야 합니다.
-운영 적용 후 문제가 발생하면 이전 설정·이미지·환경변수로 복원합니다.
+</div>
